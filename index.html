@@ -71,6 +71,13 @@ html,body{max-width:100%;overflow-x:hidden}
   #newIssueBtn{flex:0 0 auto;padding-left:11px;padding-right:11px}
 }
 
+
+/* v1.3 — director management */
+.adminTabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.adminTab.active{background:var(--green);color:#fff}.adminTab{background:#eef4f6;color:#4d6071}
+.adminList{display:grid;gap:10px}.adminCard{border:1px solid var(--line);border-radius:16px;padding:14px;background:#fff}.adminCardHead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.adminActions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.adminMeta{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.adminEmpty{padding:18px;text-align:center;color:var(--muted)}
+.checkGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.checkItem{display:flex;align-items:flex-start;gap:8px;border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff}.checkItem input{width:auto;margin-top:2px}.checkItem span{min-width:0;overflow-wrap:anywhere}
+.zoneAdminRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:13px;padding:11px;background:#fff}
+@media(max-width:600px){.checkGrid{grid-template-columns:1fr}.adminCardHead{flex-direction:column}.adminActions button{flex:1 1 auto}.zoneAdminRow{grid-template-columns:minmax(0,1fr)}}
 </style>
 </head>
 <body>
@@ -211,7 +218,26 @@ html,body{max-width:100%;overflow-x:hidden}
               <div class="row" style="margin-top:12px"><button class="primary" id="enablePushBtn">Включить уведомления</button><button class="ghost hidden" id="installAppBtn">Установить приложение</button></div>
               <div id="pushHint" class="small" style="margin-top:10px">Для фоновых push приложение должно быть открыто по HTTPS. На iPhone web-push работает после добавления приложения на экран «Домой».</div>
             </div>
+            <div id="directorAdminCard" class="card hidden" style="box-shadow:none;margin-top:14px;background:#fbfcff">
+              <div class="row between"><div><b>Управление системой</b><div class="small" style="margin-top:4px">Пользователи, должности, объекты и зоны</div></div><span class="pill blue">Директор</span></div>
+              <div class="row" style="margin-top:12px"><button class="primary" id="openAdminBtn">Открыть управление</button></div>
+            </div>
             <div class="row" style="margin-top:14px"><button class="neutral" id="logoutMobile">Выйти из аккаунта</button></div>
+          </div>
+        </section>
+
+        <section id="screenAdmin" class="screen">
+          <div class="card">
+            <div class="row between"><div><div class="sectionTitle">Управление</div><div class="small" style="margin-top:3px">Доступно только директору</div></div><button class="neutral" id="adminBackBtn">← Профиль</button></div>
+            <div class="adminTabs"><button class="adminTab active" id="adminUsersTab">Пользователи</button><button class="adminTab" id="adminObjectsTab">Объекты и зоны</button></div>
+            <div id="adminUsersPane">
+              <div class="row between"><div class="subTitle" style="margin:0">Пользователи</div><button class="primary" id="addUserBtn">+ Пользователь</button></div>
+              <div id="adminUsersList" class="adminList" style="margin-top:12px"></div>
+            </div>
+            <div id="adminObjectsPane" class="hidden">
+              <div class="row between"><div class="subTitle" style="margin:0">Объекты</div><button class="primary" id="addObjectBtn">+ Объект</button></div>
+              <div id="adminObjectsList" class="adminList" style="margin-top:12px"></div>
+            </div>
           </div>
         </section>
 
@@ -228,6 +254,45 @@ html,body{max-width:100%;overflow-x:hidden}
   <button class="navBtn" data-screen="zones"><b>▦</b>Объект</button>
   <button class="navBtn" data-screen="profile"><b>●</b>Профиль</button>
 </nav>
+
+<dialog id="userAdminDialog"><form method="dialog" class="dlg" id="userAdminForm">
+  <div class="dialogTitle" id="userAdminTitle">Новый пользователь</div>
+  <input type="hidden" id="adminUserId">
+  <div class="field"><label>ФИО</label><input id="adminUserName" required></div>
+  <div class="field"><label>E-mail</label><input id="adminUserEmail" type="email" required></div>
+  <div class="field"><label>Телефон</label><input id="adminUserPhone" type="tel"></div>
+  <div class="field"><label>Компания</label><input id="adminUserCompany"></div>
+  <div class="field"><label>Сторона</label><select id="adminUserSide"><option value="cleaning">УК «Содействие»</option><option value="client">Заказчик</option></select></div>
+  <div class="field"><label>Должность</label><select id="adminUserRole"></select></div>
+  <div class="field"><label id="adminPasswordLabel">Временный пароль</label><input id="adminUserPassword" type="password" autocomplete="new-password"><div class="small" style="margin-top:5px" id="adminPasswordHint">Минимум 8 символов.</div></div>
+  <div class="field"><label>Доступ к объектам</label><div id="adminUserObjects" class="checkGrid"></div></div>
+  <div class="field"><label class="checkItem" style="display:flex"><input id="adminUserActive" type="checkbox" checked><span><b>Пользователь активен</b><div class="small">Если отключить — вход останется, но доступ к рабочим данным будет закрыт.</div></span></label></div>
+  <div class="row between"><button value="cancel">Отмена</button><button class="primary" value="default" id="saveAdminUserBtn">Сохранить</button></div>
+</form></dialog>
+
+<dialog id="objectAdminDialog"><form method="dialog" class="dlg" id="objectAdminForm">
+  <div class="dialogTitle" id="objectAdminTitle">Новый объект</div>
+  <input type="hidden" id="adminObjectId">
+  <div class="field"><label>Название объекта</label><input id="adminObjectName" required></div>
+  <div class="field"><label>Адрес</label><input id="adminObjectAddress"></div>
+  <div class="field"><label class="checkItem" style="display:flex"><input id="adminObjectActive" type="checkbox" checked><span><b>Объект активен</b><div class="small">Неактивный объект сохраняется в базе, но скрывается из рабочей части.</div></span></label></div>
+  <div class="row between"><button value="cancel">Отмена</button><button class="primary" value="default">Сохранить</button></div>
+</form></dialog>
+
+<dialog id="zonesAdminDialog"><div class="dlg">
+  <div class="row between"><div><div class="dialogTitle" style="margin:0">Зоны объекта</div><div id="zonesAdminObjectName" class="small" style="margin-top:4px"></div></div><button class="primary" id="addZoneBtn">+ Зона</button></div>
+  <div id="zonesAdminList" class="adminList" style="margin-top:14px"></div>
+  <div class="row" style="margin-top:16px"><button id="closeZonesAdminBtn">Закрыть</button></div>
+</div></dialog>
+
+<dialog id="zoneEditDialog"><form method="dialog" class="dlg" id="zoneEditForm">
+  <div class="dialogTitle" id="zoneEditTitle">Новая зона</div>
+  <input type="hidden" id="adminZoneId"><input type="hidden" id="adminZoneObjectId">
+  <div class="field"><label>Название зоны</label><input id="adminZoneName" required></div>
+  <div class="field"><label>Порядок отображения</label><input id="adminZoneOrder" type="number" min="0" step="1" value="0"></div>
+  <div class="field"><label class="checkItem" style="display:flex"><input id="adminZoneActive" type="checkbox" checked><span><b>Зона активна</b><div class="small">Зоны с историей лучше отключать, а не удалять.</div></span></label></div>
+  <div class="row between"><button value="cancel">Отмена</button><button class="primary" value="default">Сохранить</button></div>
+</form></dialog>
 
 <dialog id="issueDialog"><form method="dialog" class="dlg" id="issueForm">
   <div class="dialogTitle">Новое замечание</div>
@@ -259,6 +324,7 @@ const VAPID_PUBLIC_KEY='BLQ83T8-txE6GHE5mJQMjLR0HvNf_uk8obDIRDRE6l2L3Yt7hAGnSSxZ
 const supabase=createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const $=id=>document.getElementById(id);
 let profile=null, objects=[], zones=[], issues=[], profiles=[], objectUsers=[], selectedObjectId=null, selectedIssueId=null;
+let adminProfiles=[], adminObjects=[], adminZones=[], adminObjectUsers=[], adminPane='users', adminZonesObjectId=null;
 let activeScreen='dashboard', statusFilter='all', searchText='', myOnly=false, autoRefreshHandle=null, deferredInstallPrompt=null;
 const roleRu={director:'Директор',lead_manager:'Ведущий менеджер',regional_manager:'Региональный менеджер',object_manager:'Менеджер объекта',client_regional:'Региональное ответственное лицо',client_object:'Ответственное лицо заказчика'};
 const sideRu={cleaning:'Клининговая компания',client:'Заказчик'};
@@ -286,14 +352,14 @@ async function logout(){await supabase.auth.signOut();location.reload()}
 $('logoutBtn').onclick=logout;$('logoutMobile').onclick=logout;
 $('refreshBtn').onclick=()=>loadAll(true);$('refreshTop').onclick=()=>loadAll(true);
 
-async function enterApp(){try{const {data:{user}}=await supabase.auth.getUser();if(!user)return;const {data:p,error}=await supabase.from('profiles').select('*').eq('id',user.id).single();if(error)throw error;profile=p;$('who').textContent=p.full_name;$('role').textContent=`${sideRu[p.side]||p.side} · ${roleRu[p.role]||p.role}`;$('profileName').textContent=p.full_name;$('profileRole').textContent=`${sideRu[p.side]||p.side} · ${roleRu[p.role]||p.role}`;$('profileEmail').textContent=p.email||user.email||'';$('loginCard').classList.add('hidden');$('app').classList.remove('hidden');$('bottomNav').classList.remove('hidden');$('refreshTop').classList.remove('hidden');$('myOnlyBtn').classList.toggle('hidden',p.side!=='cleaning');await loadAll();await initPushUi();startAutoRefresh()}catch(e){msg($('loginMsg'),errText(e),'error')}}
+async function enterApp(){try{const {data:{user}}=await supabase.auth.getUser();if(!user)return;const {data:p,error}=await supabase.from('profiles').select('*').eq('id',user.id).single();if(error)throw error;profile=p;$('who').textContent=p.full_name;$('role').textContent=`${sideRu[p.side]||p.side} · ${roleRu[p.role]||p.role}`;$('profileName').textContent=p.full_name;$('profileRole').textContent=`${sideRu[p.side]||p.side} · ${roleRu[p.role]||p.role}`;$('profileEmail').textContent=p.email||user.email||'';$('loginCard').classList.add('hidden');$('app').classList.remove('hidden');$('bottomNav').classList.remove('hidden');$('refreshTop').classList.remove('hidden');$('myOnlyBtn').classList.toggle('hidden',p.side!=='cleaning');$('directorAdminCard').classList.toggle('hidden',p.role!=='director');await loadAll();await initPushUi();startAutoRefresh()}catch(e){msg($('loginMsg'),errText(e),'error')}}
 function startAutoRefresh(){if(autoRefreshHandle)clearInterval(autoRefreshHandle);autoRefreshHandle=setInterval(()=>{if(!document.hidden)loadAll(false)},30000)}
 
 async function loadAll(showErrors=true){try{const [o,z,i,p,ou]=await Promise.all([
  supabase.from('objects').select('*').eq('is_active',true).order('name'),
  supabase.from('object_zones').select('*').eq('is_active',true).order('sort_order'),
  supabase.from('issues').select('*').order('created_at',{ascending:false}),
- supabase.from('profiles').select('id,full_name,email,role,side'),
+ supabase.from('profiles').select('id,full_name,email,phone,company_name,role,side,is_active'),
  supabase.from('object_users').select('object_id,user_id')
 ]);for(const x of [o,z,i,p,ou])if(x.error)throw x.error;objects=o.data||[];zones=z.data||[];issues=i.data||[];profiles=p.data||[];objectUsers=ou.data||[];if(!selectedObjectId||!objects.some(o=>o.id===selectedObjectId))selectedObjectId=objects[0]?.id||null;renderAll()}catch(e){if(showErrors)alert('Ошибка загрузки: '+errText(e))}}
 function renderAll(){renderObjectSelectors();renderDashboard();renderFilters();renderIssues();renderZones();renderAlerts()}
@@ -352,7 +418,7 @@ function renderZones(){
 function buildAlerts(){const out=[];for(const i of issues){if(i.status==='closed')continue;const age=ageMinutes(i),sla=objectSla(i.object_id),base={issueId:Number(i.id),objectId:i.object_id};if(profile?.side==='client'){if(i.status==='awaiting_approval')out.push({...base,severity:'info',title:`Подтвердите устранение №${i.id}`,text:`${objectName(i.object_id)} · ${zoneName(i.zone_id)}`});continue}if(i.status==='returned'&&(i.responsible_id===profile?.id||['regional_manager','lead_manager','director'].includes(profile?.role)))out.push({...base,severity:'critical',title:`Замечание №${i.id} возвращено`,text:`${objectName(i.object_id)} · требуется повторное устранение`});if(profile?.role==='object_manager'&&i.status==='new')out.push({...base,severity:isAcceptLate(i)?'critical':'warning',title:`Новое замечание №${i.id}`,text:`${zoneName(i.zone_id)} · ${age} мин с создания`});if(profile?.role==='regional_manager'&&i.status==='new'&&age>=sla.accept)out.push({...base,severity:age>=sla.lead?'critical':'warning',title:`Не принято в срок: №${i.id}`,text:`Прошло ${age} мин · норматив ${sla.accept} мин`});if(profile?.role==='lead_manager'&&i.status==='new'&&age>=sla.lead)out.push({...base,severity:'critical',title:`Эскалация ведущему: №${i.id}`,text:`Не принято ${age} мин · порог ${sla.lead} мин`});if(profile?.role==='director'&&age>=sla.resolve)out.push({...base,severity:'critical',title:`Просрочено устранение №${i.id}`,text:`${objectName(i.object_id)} · ${age} мин при SLA ${sla.resolve}`});if(i.responsible_id===profile?.id&&i.status==='in_progress'&&age>=Math.max(1,sla.resolve-15)&&age<sla.resolve)out.push({...base,severity:'warning',title:`Срок устранения близко: №${i.id}`,text:`Осталось ${sla.resolve-age} мин`})}return out.sort((a,b)=>(a.severity==='critical'?0:1)-(b.severity==='critical'?0:1))}
 function renderAlerts(){const arr=buildAlerts();$('alertTotalPill').textContent=arr.length;$('alertBadge').textContent=arr.length;$('alertBadge').classList.toggle('hidden',!arr.length);$('alerts').innerHTML=arr.length?arr.map(a=>`<div class="alertCard ${a.severity==='critical'?'critical':a.severity==='info'?'info':''}" data-alert-iid="${a.issueId}"><div class="row between"><div class="alertTitle">${esc(a.title)}</div><span class="pill ${a.severity==='critical'?'red':a.severity==='info'?'blue':'orange'}">${a.severity==='critical'?'Срочно':a.severity==='info'?'Действие':'Внимание'}</span></div><div class="small" style="margin-top:5px">${esc(a.text)}</div></div>`).join(''):'<div class="ok">Сейчас нет уведомлений, требующих действия.</div>';$('alerts').querySelectorAll('[data-alert-iid]').forEach(el=>el.onclick=()=>openIssue(Number(el.dataset.alertIid)))}
 
-function switchScreen(name){activeScreen=name;document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));const map={dashboard:'screenDashboard',issues:'screenIssues',alerts:'screenAlerts',zones:'screenZones',profile:'screenProfile',detail:'screenIssueDetail'};$(map[name]).classList.add('active');document.querySelectorAll('.navBtn').forEach(b=>b.classList.toggle('active',b.dataset.screen===name));if(name==='dashboard')renderDashboard();if(name==='issues')renderIssues();if(name==='zones')renderZones();if(name==='alerts')renderAlerts();window.scrollTo({top:0,behavior:'smooth'})}
+function switchScreen(name){activeScreen=name;document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));const map={dashboard:'screenDashboard',issues:'screenIssues',alerts:'screenAlerts',zones:'screenZones',profile:'screenProfile',admin:'screenAdmin',detail:'screenIssueDetail'};$(map[name]).classList.add('active');document.querySelectorAll('.navBtn').forEach(b=>b.classList.toggle('active',b.dataset.screen===name));if(name==='dashboard')renderDashboard();if(name==='issues')renderIssues();if(name==='zones')renderZones();if(name==='alerts')renderAlerts();if(name==='admin')loadAdminData();window.scrollTo({top:0,behavior:'smooth'})}
 document.querySelectorAll('.navBtn').forEach(b=>b.onclick=()=>switchScreen(b.dataset.screen));
 
 $('slaForm').addEventListener('submit',async e=>{e.preventDefault();const o=selectedObject();if(!o)return;const accept=Number($('slaAccept').value),lead=Number($('slaLead').value),resolve=Number($('slaResolve').value);try{const {error}=await supabase.rpc('update_object_sla',{p_object_id:o.id,p_accept_minutes:accept,p_lead_minutes:lead,p_resolve_minutes:resolve});if(error)throw error;await loadAll();alert('SLA сохранён')}catch(e){alert('Ошибка SLA: '+errText(e))}});
@@ -369,6 +435,85 @@ async function rpcAction(name,args){try{const {error}=await supabase.rpc(name,ar
 $('afterForm').addEventListener('submit',async e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();try{const file=$('afterPhoto').files[0];if(!file)throw new Error('Добавьте фото');const i=issues.find(x=>Number(x.id)===Number(selectedIssueId));await uploadPhoto(i.object_id,i.id,'after',file);const {error}=await supabase.rpc('submit_issue_for_approval',{p_issue_id:i.id});if(error)throw error;$('afterDialog').close();await loadAll();await openIssue(i.id)}catch(e){alert('Ошибка: '+errText(e))}});
 $('returnForm').addEventListener('submit',async e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();const reason=$('returnReason').value.trim();if(!reason)return;try{const {error}=await supabase.rpc('return_issue',{p_issue_id:selectedIssueId,p_reason:reason});if(error)throw error;$('returnDialog').close();await loadAll();await openIssue(selectedIssueId)}catch(e){alert('Ошибка: '+errText(e))}});
 
+
+
+// ===== v1.3 Director management =====
+const adminRoleOptions={
+  cleaning:[['director','Директор'],['lead_manager','Ведущий менеджер'],['regional_manager','Региональный менеджер'],['object_manager','Менеджер объекта']],
+  client:[['client_regional','Региональное ответственное лицо'],['client_object','Ответственное лицо заказчика']]
+};
+const singleObjectAdminRoles=new Set(['object_manager','client_object']);
+function adminRoleLabel(role){return roleRu[role]||role}
+function adminSideLabel(side){return sideRu[side]||side}
+function adminAssignedObjects(uid){return adminObjectUsers.filter(x=>x.user_id===uid).map(x=>x.object_id)}
+function adminObjectLabel(id){return adminObjects.find(o=>o.id===id)?.name||'—'}
+
+async function loadAdminData(){
+  if(profile?.role!=='director'){switchScreen('profile');return}
+  try{
+    $('adminUsersList').innerHTML='<div class="small">Загрузка...</div>';
+    $('adminObjectsList').innerHTML='<div class="small">Загрузка...</div>';
+    const [u,o,z,ou]=await Promise.all([
+      supabase.from('profiles').select('*').order('full_name'),
+      supabase.from('objects').select('*').order('name'),
+      supabase.from('object_zones').select('*').order('sort_order'),
+      supabase.from('object_users').select('object_id,user_id')
+    ]);
+    for(const x of [u,o,z,ou])if(x.error)throw x.error;
+    adminProfiles=u.data||[];adminObjects=o.data||[];adminZones=z.data||[];adminObjectUsers=ou.data||[];
+    renderAdmin();
+  }catch(e){$('adminUsersList').innerHTML=`<div class="error">${esc(errText(e))}</div>`}
+}
+function renderAdmin(){
+  $('adminUsersTab').classList.toggle('active',adminPane==='users');$('adminObjectsTab').classList.toggle('active',adminPane==='objects');
+  $('adminUsersPane').classList.toggle('hidden',adminPane!=='users');$('adminObjectsPane').classList.toggle('hidden',adminPane!=='objects');
+  if(adminPane==='users')renderAdminUsers();else renderAdminObjects();
+}
+function renderAdminUsers(){
+  const list=adminProfiles.map(u=>{const ids=adminAssignedObjects(u.id),labels=ids.map(adminObjectLabel);return `<div class="adminCard"><div class="adminCardHead"><div><b>${esc(u.full_name)}</b><div class="small" style="margin-top:3px">${esc(u.email||'')} ${u.phone?`· ${esc(u.phone)}`:''}</div></div><span class="pill ${u.is_active?'blue':'gray'}">${u.is_active?'Активен':'Отключён'}</span></div><div class="adminMeta"><span class="pill">${esc(adminSideLabel(u.side))}</span><span class="pill gray">${esc(adminRoleLabel(u.role))}</span></div><div class="small" style="margin-top:9px"><b>Объекты:</b> ${u.role==='director'?'Все объекты':esc(labels.join(', ')||'не назначены')}</div><div class="adminActions"><button class="ghost" data-edit-user="${u.id}">Редактировать</button></div></div>`}).join('');
+  $('adminUsersList').innerHTML=list||'<div class="adminEmpty">Пользователей нет</div>';
+  $('adminUsersList').querySelectorAll('[data-edit-user]').forEach(b=>b.onclick=()=>openAdminUserDialog(b.dataset.editUser));
+}
+function renderAdminObjects(){
+  const list=adminObjects.map(o=>{const z=adminZones.filter(x=>x.object_id===o.id),assigned=adminObjectUsers.filter(x=>x.object_id===o.id).length;return `<div class="adminCard"><div class="adminCardHead"><div><b>${esc(o.name)}</b><div class="small" style="margin-top:3px">${esc(o.address||'')}</div></div><span class="pill ${o.is_active?'blue':'gray'}">${o.is_active?'Активен':'Отключён'}</span></div><div class="adminMeta"><span class="metric">Зон: ${z.filter(x=>x.is_active).length}</span><span class="metric">Ответственных: ${assigned}</span></div><div class="adminActions"><button class="ghost" data-edit-object="${o.id}">Редактировать</button><button class="neutral" data-zones-object="${o.id}">Зоны</button></div></div>`}).join('');
+  $('adminObjectsList').innerHTML=list||'<div class="adminEmpty">Объектов нет</div>';
+  $('adminObjectsList').querySelectorAll('[data-edit-object]').forEach(b=>b.onclick=()=>openAdminObjectDialog(b.dataset.editObject));
+  $('adminObjectsList').querySelectorAll('[data-zones-object]').forEach(b=>b.onclick=()=>openAdminZones(b.dataset.zonesObject));
+}
+$('openAdminBtn').onclick=()=>{adminPane='users';switchScreen('admin')};
+$('adminBackBtn').onclick=()=>switchScreen('profile');
+$('adminUsersTab').onclick=()=>{adminPane='users';renderAdmin()};
+$('adminObjectsTab').onclick=()=>{adminPane='objects';renderAdmin()};
+$('addUserBtn').onclick=()=>openAdminUserDialog();
+$('addObjectBtn').onclick=()=>openAdminObjectDialog();
+
+function fillAdminRoleOptions(preferred){
+  const side=$('adminUserSide').value;const opts=adminRoleOptions[side]||[];
+  $('adminUserRole').innerHTML=opts.map(([v,t])=>`<option value="${v}">${t}</option>`).join('');
+  if(preferred&&opts.some(([v])=>v===preferred))$('adminUserRole').value=preferred;
+  renderAdminObjectChecks();
+}
+function renderAdminObjectChecks(selectedIds){
+  const role=$('adminUserRole').value;const selected=selectedIds??[...document.querySelectorAll('#adminUserObjects input:checked')].map(x=>x.value);
+  if(role==='director'){$('adminUserObjects').innerHTML='<div class="small">Директор видит все объекты автоматически.</div>';return}
+  const single=singleObjectAdminRoles.has(role);
+  $('adminUserObjects').innerHTML=adminObjects.filter(o=>o.is_active).map(o=>`<label class="checkItem"><input type="${single?'radio':'checkbox'}" name="adminObj" value="${o.id}" ${selected.includes(o.id)?'checked':''}><span><b>${esc(o.name)}</b><div class="small">${esc(o.address||'')}</div></span></label>`).join('')||'<div class="small">Нет активных объектов</div>';
+}
+function openAdminUserDialog(id=null){
+  const u=id?adminProfiles.find(x=>x.id===id):null;
+  $('userAdminTitle').textContent=u?'Редактирование пользователя':'Новый пользователь';$('adminUserId').value=u?.id||'';$('adminUserName').value=u?.full_name||'';$('adminUserEmail').value=u?.email||'';$('adminUserPhone').value=u?.phone||'';$('adminUserCompany').value=u?.company_name||'';$('adminUserSide').value=u?.side||'cleaning';$('adminUserPassword').value='';$('adminUserActive').checked=u?.is_active!==false;$('adminPasswordLabel').textContent=u?'Новый пароль (необязательно)':'Временный пароль';$('adminPasswordHint').textContent=u?'Оставьте пустым, чтобы не менять пароль.':'Минимум 8 символов.';
+  fillAdminRoleOptions(u?.role||'object_manager');renderAdminObjectChecks(u?adminAssignedObjects(u.id):[]);$('userAdminDialog').showModal();
+}
+$('adminUserSide').onchange=()=>fillAdminRoleOptions();$('adminUserRole').onchange=()=>renderAdminObjectChecks();
+$('userAdminForm').addEventListener('submit',async e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();const id=$('adminUserId').value;const role=$('adminUserRole').value;const objectIds=[...document.querySelectorAll('#adminUserObjects input:checked')].map(x=>x.value);try{if(singleObjectAdminRoles.has(role)&&objectIds.length>1)throw new Error('Для этой должности можно выбрать только один объект');const payload={operation:id?'update':'create',user_id:id||undefined,full_name:$('adminUserName').value.trim(),email:$('adminUserEmail').value.trim(),phone:$('adminUserPhone').value.trim(),company_name:$('adminUserCompany').value.trim(),side:$('adminUserSide').value,role,password:$('adminUserPassword').value,is_active:$('adminUserActive').checked,object_ids:objectIds};if(!id&&payload.password.length<8)throw new Error('Временный пароль должен содержать не менее 8 символов');$('saveAdminUserBtn').disabled=true;const {data,error}=await supabase.functions.invoke('admin-users',{body:payload});if(error)throw error;if(!data?.ok)throw new Error(data?.error||'Не удалось сохранить пользователя');$('userAdminDialog').close();await loadAll();await loadAdminData()}catch(e){alert('Ошибка: '+errText(e))}finally{$('saveAdminUserBtn').disabled=false}});
+
+function openAdminObjectDialog(id=null){const o=id?adminObjects.find(x=>x.id===id):null;$('objectAdminTitle').textContent=o?'Редактирование объекта':'Новый объект';$('adminObjectId').value=o?.id||'';$('adminObjectName').value=o?.name||'';$('adminObjectAddress').value=o?.address||'';$('adminObjectActive').checked=o?.is_active!==false;$('objectAdminDialog').showModal()}
+$('objectAdminForm').addEventListener('submit',async e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();try{const existing=$('adminObjectId').value||null;const {data,error}=await supabase.rpc('director_manage_object',{p_object_id:existing,p_name:$('adminObjectName').value.trim(),p_address:$('adminObjectAddress').value.trim(),p_is_active:$('adminObjectActive').checked});if(error)throw error;$('objectAdminDialog').close();await loadAll();await loadAdminData();if(!existing&&data)openAdminZones(data)}catch(e){alert('Ошибка: '+errText(e))}});
+function openAdminZones(objectId){adminZonesObjectId=objectId;const o=adminObjects.find(x=>x.id===objectId);$('zonesAdminObjectName').textContent=o?.name||'';renderAdminZones();$('zonesAdminDialog').showModal()}
+function renderAdminZones(){const arr=adminZones.filter(z=>z.object_id===adminZonesObjectId).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));$('zonesAdminList').innerHTML=arr.map(z=>`<div class="zoneAdminRow"><div><b>${esc(z.name)}</b><div class="small">Порядок: ${z.sort_order||0} · ${z.is_active?'активна':'отключена'}</div></div><button class="ghost" data-edit-zone="${z.id}">Изменить</button></div>`).join('')||'<div class="adminEmpty">Зоны ещё не добавлены</div>';$('zonesAdminList').querySelectorAll('[data-edit-zone]').forEach(b=>b.onclick=()=>openZoneEdit(b.dataset.editZone))}
+$('addZoneBtn').onclick=()=>openZoneEdit();$('closeZonesAdminBtn').onclick=()=>$('zonesAdminDialog').close();
+function openZoneEdit(id=null){const z=id?adminZones.find(x=>x.id===id):null;$('zoneEditTitle').textContent=z?'Редактирование зоны':'Новая зона';$('adminZoneId').value=z?.id||'';$('adminZoneObjectId').value=z?.object_id||adminZonesObjectId;$('adminZoneName').value=z?.name||'';$('adminZoneOrder').value=z?.sort_order??adminZones.filter(x=>x.object_id===adminZonesObjectId).length+1;$('adminZoneActive').checked=z?.is_active!==false;$('zoneEditDialog').showModal()}
+$('zoneEditForm').addEventListener('submit',async e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();try{const {error}=await supabase.rpc('director_manage_zone',{p_zone_id:$('adminZoneId').value||null,p_object_id:$('adminZoneObjectId').value,p_name:$('adminZoneName').value.trim(),p_sort_order:Number($('adminZoneOrder').value||0),p_is_active:$('adminZoneActive').checked});if(error)throw error;$('zoneEditDialog').close();await loadAll();await loadAdminData();adminZonesObjectId=$('adminZoneObjectId').value;renderAdminZones()}catch(e){alert('Ошибка: '+errText(e))}});
 
 function base64UrlToUint8Array(value){const pad='='.repeat((4-value.length%4)%4);const b64=(value+pad).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(b64);return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)))}
 async function initPushUi(){
