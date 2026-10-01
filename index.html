@@ -58,7 +58,8 @@ html,body{max-width:100%;overflow-x:hidden}
   #screenIssues .toolbar{display:grid;grid-template-columns:minmax(0,1fr);width:100%}
   #screenIssues .toolbar .grow{width:100%;min-width:0}
   #screenIssues #myOnlyBtn{width:100%;max-width:100%}
-  #screenIssues .filters{width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden}
+  #screenIssues .filters{width:100%;max-width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;overflow:visible}
+  #screenIssues .filters .filter{width:100%;min-width:0;white-space:normal;line-height:1.15;text-align:center;padding:9px 7px}
   #screenIssues .issueTop{flex-wrap:wrap}
   #screenIssues .issueTop>div:first-child{flex:1 1 180px;min-width:0}
   #screenIssues .issueFoot{display:grid;grid-template-columns:minmax(0,1fr);gap:4px}
