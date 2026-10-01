@@ -42,6 +42,34 @@ dialog{border:0;border-radius:20px;padding:0;width:min(620px,calc(100% - 24px));
 @media(max-width:900px){.objectGrid{grid-template-columns:1fr}.objectHeroName{font-size:21px}.objectKpis{grid-template-columns:repeat(2,1fr)}.zoneRichList{grid-template-columns:1fr}}
 @media(max-width:900px){.dashboardHero{align-items:flex-start;flex-direction:column}.dashboardHello{font-size:22px}.layout{grid-template-columns:1fr}.desktopAside{display:none}.bottomNav{display:flex}.mobileObject{display:block}.shell{padding:10px 10px 92px}.top{padding:4px 2px}.top h1{font-size:17px}.brandLogo{width:46px;height:46px}.top p{font-size:11px}.kpis{grid-template-columns:repeat(2,1fr)}.objectSummary{grid-template-columns:1fr}.photoGrid{grid-template-columns:1fr}.card{padding:14px;border-radius:17px}.topActions .neutral{display:none}}
 @media(max-width:430px){.kpi strong{font-size:24px}.issueTop{align-items:flex-start}.sectionTitle{font-size:18px}.slaGrid{grid-template-columns:1fr}}
+
+/* v1.2.1 — mobile width fix for the Issues screen */
+html,body{max-width:100%;overflow-x:hidden}
+.shell,.layout,.stack,.screen,.card,#screenIssues,#screenIssues .card,#issues,.issueCard{min-width:0;max-width:100%}
+.issueCard,.issueTop,.issueDesc,.issueFoot,.detailBlock{overflow-wrap:anywhere;word-break:break-word}
+.issueTop>*{min-width:0}
+#screenIssues .row.between>div{min-width:0;max-width:100%}
+#selectedTitle{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+#statusFilters{width:100%;max-width:100%;overscroll-behavior-inline:contain;-webkit-overflow-scrolling:touch}
+#searchIssue{min-width:0;max-width:100%}
+@media(max-width:900px){
+  #screenIssues{width:100%;overflow-x:hidden}
+  #screenIssues .card{width:100%;overflow:hidden}
+  #screenIssues .toolbar{display:grid;grid-template-columns:minmax(0,1fr);width:100%}
+  #screenIssues .toolbar .grow{width:100%;min-width:0}
+  #screenIssues #myOnlyBtn{width:100%;max-width:100%}
+  #screenIssues .filters{width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden}
+  #screenIssues .issueTop{flex-wrap:wrap}
+  #screenIssues .issueTop>div:first-child{flex:1 1 180px;min-width:0}
+  #screenIssues .issueFoot{display:grid;grid-template-columns:minmax(0,1fr);gap:4px}
+  #screenIssues .item{width:100%;max-width:100%;overflow:hidden}
+}
+@media(max-width:430px){
+  #screenIssues .card{padding-left:12px;padding-right:12px}
+  #screenIssues .row.between{align-items:flex-start}
+  #newIssueBtn{flex:0 0 auto;padding-left:11px;padding-right:11px}
+}
+
 </style>
 </head>
 <body>
