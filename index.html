@@ -530,7 +530,7 @@ async function loadAnalytics(showError=true){
   }finally{analyticsLoading=false}
 }
 
-// ===== v1.4.2 Report export: Excel + PDF + photo report =====
+// ===== v1.4.3 Report export: compact portrait PDF + Excel photo report =====
 function reportExportContext(){
   const a=analyticsData||{},p=a.period||{};
   const select=$('reportObjectSelect');
@@ -694,22 +694,29 @@ function pdfTable(title,headers,rows,widths){
   if(!rows.length)return [{text:title,style:'sectionTitle',margin:[0,10,0,5]},{text:'Нет данных',color:'#6b7c90',fontSize:9}];
   return [{text:title,style:'sectionTitle',margin:[0,10,0,5]},{table:{headerRows:1,widths:widths||headers.map(()=>'*'),body:[headers.map(x=>({text:x,style:'tableHeader'})),...rows.map(r=>r.map(x=>String(x??'—')))]},layout:'lightHorizontalLines',fontSize:8}]
 }
-function pdfPhotoBlock(d,assets,first){
+function pdfPhotoBlock(d,assets){
   const before=d.before_path?assets.get(d.before_path):null,after=d.after_path?assets.get(d.after_path):null;
   const imgBox=(title,asset,empty)=>[
-    {text:title,bold:true,fontSize:9,color:'#17365f',margin:[0,0,0,5]},
-    asset?{image:asset.dataUrl,fit:[330,235],alignment:'center'}:{text:empty,alignment:'center',color:'#8793a3',margin:[0,65,0,65]}
+    {text:title,bold:true,fontSize:7.5,color:'#17365f',margin:[0,0,0,3]},
+    asset?{image:asset.dataUrl,fit:[238,140],alignment:'center'}:{text:empty,alignment:'center',color:'#8793a3',fontSize:7,margin:[0,52,0,52]}
   ];
-  return [
-    {text:`Замечание №${d.id}`,style:'sectionTitle',pageBreak:first?undefined:'before',margin:[0,0,0,6]},
-    {table:{widths:[95,'*',95,'*'],body:[
-      [{text:'Объект',bold:true},d.object_name,{text:'Зона',bold:true},d.zone_name],
-      [{text:'Категория',bold:true},d.category,{text:'Статус',bold:true},reportStatusLabel(d.status)],
-      [{text:'Дата замечания',bold:true},reportDateTime(d.created_at),{text:'Дата исправления',bold:true},d.correction_at?reportDateTime(d.correction_at):'Не устранено'],
-      [{text:'Ответственный',bold:true},d.responsible_name||'—',{text:'Описание',bold:true},d.description||'—']
-    ]},layout:'lightHorizontalLines',fontSize:8,margin:[0,0,0,10]},
-    {columns:[{width:'*',stack:imgBox('Фото замечания',before,d.before_path?'Фото недоступно':'Фото не приложено')},{width:'*',stack:imgBox('Фото исправленного замечания',after,d.after_path?'Фото недоступно':'Замечание ещё не устранено')}],columnGap:12}
-  ]
+  return [{
+    unbreakable:true,
+    margin:[0,0,0,9],
+    stack:[
+      {text:`Замечание №${d.id}`,fontSize:9,bold:true,color:'#17365f',margin:[0,0,0,3]},
+      {table:{widths:[58,'*',64,'*'],body:[
+        [{text:'Объект',bold:true},d.object_name,{text:'Зона',bold:true},d.zone_name],
+        [{text:'Категория',bold:true},d.category,{text:'Статус',bold:true},reportStatusLabel(d.status)],
+        [{text:'Дата/время',bold:true},reportDateTime(d.created_at),{text:'Исправлено',bold:true},d.correction_at?reportDateTime(d.correction_at):'Не устранено'],
+        [{text:'Ответственный',bold:true},d.responsible_name||'—',{text:'Описание',bold:true},d.description||'—']
+      ]},layout:'lightHorizontalLines',fontSize:7,margin:[0,0,0,5]},
+      {columns:[
+        {width:'*',stack:imgBox('Фото замечания',before,d.before_path?'Фото недоступно':'Фото не приложено')},
+        {width:'*',stack:imgBox('Фото исправленного замечания',after,d.after_path?'Фото недоступно':'Ещё не устранено')}
+      ],columnGap:8}
+    ]
+  }]
 }
 async function exportReportPdf(){
   if(!analyticsData){alert('Сначала сформируйте отчет кнопкой «Показать».');return}
@@ -735,8 +742,8 @@ async function exportReportPdf(){
       ...pdfTable('Ответственные',['Ответственный','Всего','Откр.','Закр.','Проср.','Ср. принятие'],(a.by_manager||[]).map(x=>[x.responsible_name||'Не назначен',x.total,x.open,x.closed,x.overdue,reportMinutes(x.avg_accept_minutes)]),['*',32,32,32,38,55]),
       ...pdfTable('Категории',['Категория','Всего','Открыто','Просрочено'],(a.by_category||[]).map(x=>[x.category||'Без категории',x.total,x.open,x.overdue]),['*',42,42,50])
     ];
-    if(details.length){content.push({text:'Фотоотчёт',style:'title',pageBreak:'before',margin:[0,0,0,10]});details.forEach((d,i)=>content.push(...pdfPhotoBlock(d,assets,i===0)))}
-    const doc={pageSize:'A4',pageOrientation:'landscape',pageMargins:[28,28,28,32],content,defaultStyle:{font:'Roboto',fontSize:9,color:'#25374d'},styles:{company:{fontSize:10,bold:true,color:'#1a7f6b'},title:{fontSize:17,bold:true,color:'#17365f',margin:[0,3,0,8]},meta:{fontSize:9,color:'#607086',margin:[0,0,0,3]},sectionTitle:{fontSize:11,bold:true,color:'#17365f'},tableHeader:{bold:true,fillColor:'#eef4f8',color:'#17365f'},kpi:{alignment:'center',bold:true,fontSize:10,margin:[3,6,3,6]},timeBox:{alignment:'center',fillColor:'#f5f8fb',margin:[5,7,5,7],fontSize:9}},footer:(current,count)=>({text:`Страница ${current} из ${count}`,alignment:'center',fontSize:8,color:'#8793a3',margin:[0,8,0,0]})};
+    if(details.length){content.push({text:'Фотоотчёт',style:'title',pageBreak:'before',margin:[0,0,0,10]});details.forEach(d=>content.push(...pdfPhotoBlock(d,assets)))}
+    const doc={pageSize:'A4',pageOrientation:'portrait',pageMargins:[22,22,22,28],content,defaultStyle:{font:'Roboto',fontSize:8,color:'#25374d'},styles:{company:{fontSize:9,bold:true,color:'#1a7f6b'},title:{fontSize:15,bold:true,color:'#17365f',margin:[0,2,0,6]},meta:{fontSize:8,color:'#607086',margin:[0,0,0,2]},sectionTitle:{fontSize:9.5,bold:true,color:'#17365f'},tableHeader:{bold:true,fillColor:'#eef4f8',color:'#17365f',fontSize:7},kpi:{alignment:'center',bold:true,fontSize:8.5,margin:[2,4,2,4]},timeBox:{alignment:'center',fillColor:'#f5f8fb',margin:[3,5,3,5],fontSize:8}},footer:(current,count)=>({text:`Страница ${current} из ${count}`,alignment:'center',fontSize:7,color:'#8793a3',margin:[0,6,0,0]})};
     btn.textContent='Сохраняем…';const blob=await new Promise((resolve,reject)=>{try{pdfMake.createPdf(doc).getBlob(resolve)}catch(e){reject(e)}});saveBlob(blob,reportFileName('pdf'));
   }catch(e){alert('Не удалось выгрузить PDF: '+errText(e)+'\nПроверьте подключение к интернету и попробуйте снова.')}finally{btn.disabled=false;btn.textContent=old}
 }
