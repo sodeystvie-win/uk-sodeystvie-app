@@ -130,6 +130,15 @@ html,body{max-width:100%;overflow-x:hidden}
 @media(max-width:900px){.inspectionTemplateGrid{grid-template-columns:1fr}.inspectionSummary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:430px){.bottomNav .navBtn{font-size:8px}.inspectionSummary{grid-template-columns:repeat(2,minmax(0,1fr))}.inspectionMetric{padding:10px}.inspectionTemplateActions button{min-width:0}.inspectionHistoryRow{align-items:flex-start}.inspectionRunFooter button{flex:1}}
 
+
+/* v1.6 — hidden developer / superadmin */
+.systemAdminCard{border:1px solid #d9e4f2;background:#f8fbff!important}
+.systemAdminCard .systemBadge{background:#17365f;color:#fff}
+.adminSystemPane{display:grid;gap:10px}
+.trashCard{border:1px solid #ecd7d7;background:#fffafa}
+.trashReason{margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff1f1;color:#7b3333;font-size:12px}
+.auditList{display:grid;gap:8px}.auditRow{border:1px solid var(--line);border-radius:13px;padding:11px 12px;background:#fff}.auditHead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.auditAction{font-weight:800}.auditDetails{margin-top:6px;font-size:12px;color:var(--muted);overflow-wrap:anywhere}.systemNote{padding:10px 12px;border-radius:12px;background:#eef4ff;color:#284a78;font-size:12px;line-height:1.45}.dangerGhost{background:#fff1f1;color:#a52b2b;border:1px solid #edcaca}.dangerGhost:hover{background:#ffe9e9}.confirmCode{font-weight:800;color:#a52b2b}.adminTab.systemTab.active{background:#17365f}.developerAccount{border-style:dashed;background:#f8fbff}.developerAccount .pill{font-size:10px}
+@media(max-width:600px){.auditHead{flex-direction:column}.trashCard .adminActions button{flex:1 1 42%}}
 </style>
 </head>
 <body>
@@ -314,14 +323,18 @@ html,body{max-width:100%;overflow-x:hidden}
               <div class="row between"><div><b>Управление системой</b><div class="small" style="margin-top:4px">Пользователи, должности, объекты и зоны</div></div><span class="pill blue">Директор</span></div>
               <div class="row" style="margin-top:12px"><button class="primary" id="openAdminBtn">Открыть управление</button></div>
             </div>
+            <div id="developerAdminCard" class="card hidden systemAdminCard" style="box-shadow:none;margin-top:14px">
+              <div class="row between"><div><b>Системное администрирование</b><div class="small" style="margin-top:4px">Полный доступ, корзина замечаний и закрытый журнал</div></div><span class="pill systemBadge">Системный доступ</span></div>
+              <div class="row" style="margin-top:12px"><button class="primary" id="openDeveloperAdminBtn">Открыть системную панель</button></div>
+            </div>
             <div class="row" style="margin-top:14px"><button class="neutral" id="logoutMobile">Выйти из аккаунта</button></div>
           </div>
         </section>
 
         <section id="screenAdmin" class="screen">
           <div class="card">
-            <div class="row between"><div><div class="sectionTitle">Управление</div><div class="small" style="margin-top:3px">Доступно только директору</div></div><button class="neutral" id="adminBackBtn">← Профиль</button></div>
-            <div class="adminTabs"><button class="adminTab active" id="adminUsersTab">Пользователи</button><button class="adminTab" id="adminObjectsTab">Объекты и зоны</button></div>
+            <div class="row between"><div><div class="sectionTitle" id="adminScreenTitle">Управление</div><div class="small" id="adminAccessHint" style="margin-top:3px">Доступно только директору</div></div><button class="neutral" id="adminBackBtn">← Профиль</button></div>
+            <div class="adminTabs"><button class="adminTab active" id="adminUsersTab">Пользователи</button><button class="adminTab" id="adminObjectsTab">Объекты и зоны</button><button class="adminTab systemTab hidden" id="adminTrashTab">Корзина</button><button class="adminTab systemTab hidden" id="adminAuditTab">Журнал</button></div>
             <div id="adminUsersPane">
               <div class="row between"><div class="subTitle" style="margin:0">Пользователи</div><button class="primary" id="addUserBtn">+ Пользователь</button></div>
               <div id="adminUsersList" class="adminList" style="margin-top:12px"></div>
@@ -329,6 +342,15 @@ html,body{max-width:100%;overflow-x:hidden}
             <div id="adminObjectsPane" class="hidden">
               <div class="row between"><div class="subTitle" style="margin:0">Объекты</div><button class="primary" id="addObjectBtn">+ Объект</button></div>
               <div id="adminObjectsList" class="adminList" style="margin-top:12px"></div>
+            </div>
+            <div id="adminTrashPane" class="hidden adminSystemPane">
+              <div class="row between"><div><div class="subTitle" style="margin:0">Корзина замечаний</div><div class="small" style="margin-top:4px">Удалённые замечания скрыты из рабочей части, SLA и обычных списков.</div></div><span class="pill red" id="trashCountPill">0</span></div>
+              <div class="systemNote">Восстановление возвращает замечание в работу. Окончательное удаление удаляет запись и фотографии без возможности восстановления.</div>
+              <div id="developerTrashList" class="adminList"></div>
+            </div>
+            <div id="adminAuditPane" class="hidden adminSystemPane">
+              <div class="row between"><div><div class="subTitle" style="margin:0">Закрытый журнал</div><div class="small" style="margin-top:4px">Системные действия разработчика. Другие роли этот журнал не видят.</div></div><span class="pill systemBadge">Developer only</span></div>
+              <div id="developerAuditList" class="auditList"></div>
             </div>
           </div>
         </section>
@@ -389,6 +411,23 @@ html,body{max-width:100%;overflow-x:hidden}
 </form></dialog>
 
 
+
+<dialog id="developerDeleteIssueDialog"><form method="dialog" class="dlg" id="developerDeleteIssueForm">
+  <div class="dialogTitle">Переместить замечание в корзину</div>
+  <input type="hidden" id="developerDeleteIssueId">
+  <div class="small" id="developerDeleteIssueInfo" style="margin-bottom:10px"></div>
+  <div class="field"><label>Причина удаления</label><textarea id="developerDeleteReason" required placeholder="Например: тестовое замечание, создано ошибочно"></textarea></div>
+  <div class="systemNote">Замечание исчезнет у всех обычных пользователей, но его можно будет восстановить из системной корзины.</div>
+  <div class="row between" style="margin-top:14px"><button value="cancel">Отмена</button><button class="danger" value="default" id="confirmDeveloperDeleteBtn">В корзину</button></div>
+</form></dialog>
+
+<dialog id="developerHardDeleteDialog"><form method="dialog" class="dlg" id="developerHardDeleteForm">
+  <div class="dialogTitle">Удалить окончательно</div>
+  <input type="hidden" id="developerHardDeleteIssueId">
+  <div class="note">Это действие необратимо. Будут удалены замечание и его фотографии. Запись о действии останется в закрытом журнале.</div>
+  <div class="field"><label>Для подтверждения введите номер замечания <span class="confirmCode" id="developerHardDeleteCode"></span></label><input id="developerHardDeleteConfirm" inputmode="numeric" autocomplete="off" required></div>
+  <div class="row between"><button value="cancel">Отмена</button><button class="danger" value="default" id="confirmDeveloperHardDeleteBtn">Удалить навсегда</button></div>
+</form></dialog>
 
 <dialog id="inspectionTemplateDialog"><form method="dialog" class="dlg" id="inspectionTemplateForm">
   <div class="dialogTitle" id="inspectionTemplateDialogTitle">Новый чек-лист</div>
@@ -454,11 +493,11 @@ const VAPID_PUBLIC_KEY='BLQ83T8-txE6GHE5mJQMjLR0HvNf_uk8obDIRDRE6l2L3Yt7hAGnSSxZ
 const supabase=createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const $=id=>document.getElementById(id);
 let profile=null, objects=[], zones=[], issues=[], profiles=[], objectUsers=[], selectedObjectId=null, selectedIssueId=null;
-let adminProfiles=[], adminObjects=[], adminZones=[], adminObjectUsers=[], adminPane='users', adminZonesObjectId=null;
+let adminProfiles=[], adminObjects=[], adminZones=[], adminObjectUsers=[], adminPane='users', adminZonesObjectId=null, developerTrash=[], developerAudit=[];
 let activeScreen='dashboard', statusFilter='all', searchText='', myOnly=false, autoRefreshHandle=null, deferredInstallPrompt=null;
 let analyticsData=null, analyticsLoading=false;
 let inspectionTemplates=[],inspectionTemplateItems=[],inspectionRuns=[],inspectionResults=[],inspectionPhotos=[],inspectionZones=[],selectedInspectionId=null,inspectionManageTemplateId=null,inspectionFailContext=null;
-const roleRu={director:'Директор',lead_manager:'Ведущий менеджер',regional_manager:'Региональный менеджер',object_manager:'Менеджер объекта',client_regional:'Региональное ответственное лицо',client_object:'Ответственное лицо заказчика'};
+const roleRu={developer:'Системный разработчик',director:'Директор',lead_manager:'Ведущий менеджер',regional_manager:'Региональный менеджер',object_manager:'Менеджер объекта',client_regional:'Региональное ответственное лицо',client_object:'Ответственное лицо заказчика'};
 const sideRu={cleaning:'Клининговая компания',client:'Заказчик'};
 const statusRu={new:'Новое',accepted:'Принято',in_progress:'В работе',awaiting_approval:'Ожидает подтверждения',returned:'Возвращено',closed:'Закрыто'};
 const filterDefs=[['all','Все'],['new','Новые'],['accepted','Приняты'],['in_progress','В работе'],['awaiting_approval','Ждут подтверждения'],['returned','Возвращены'],['closed','Закрытые']];
@@ -477,6 +516,8 @@ function userName(id){return profiles.find(p=>p.id===id)?.full_name||'—'}
 function zoneName(id){return zones.find(z=>z.id===id)?.name||'—'}
 function objectName(id){return objects.find(o=>o.id===id)?.name||'—'}
 function selectedObject(){return objects.find(o=>o.id===selectedObjectId)||null}
+function isDeveloper(){return profile?.role==='developer'}
+function isSystemAdmin(){return ['director','developer'].includes(profile?.role)}
 
 async function init(){const {data:{session}}=await supabase.auth.getSession();if(session)await enterApp()}
 $('loginBtn').onclick=async()=>{const email=$('email').value.trim(),password=$('password').value;$('loginBtn').disabled=true;$('loginMsg').innerHTML='';try{const {error}=await supabase.auth.signInWithPassword({email,password});if(error)throw error;await enterApp()}catch(e){msg($('loginMsg'),errText(e),'error')}finally{$('loginBtn').disabled=false}};
@@ -484,13 +525,13 @@ async function logout(){await supabase.auth.signOut();location.reload()}
 $('logoutBtn').onclick=logout;$('logoutMobile').onclick=logout;
 $('refreshBtn').onclick=()=>loadAll(true);$('refreshTop').onclick=()=>loadAll(true);
 
-async function enterApp(){try{const {data:{user}}=await supabase.auth.getUser();if(!user)return;const {data:p,error}=await supabase.from('profiles').select('*').eq('id',user.id).single();if(error)throw error;profile=p;$('who').textContent=p.full_name;$('role').textContent=`${sideRu[p.side]||p.side} · ${roleRu[p.role]||p.role}`;$('profileName').textContent=p.full_name;$('profileRole').textContent=`${sideRu[p.side]||p.side} · ${roleRu[p.role]||p.role}`;$('profileEmail').textContent=p.email||user.email||'';$('loginCard').classList.add('hidden');$('app').classList.remove('hidden');$('bottomNav').classList.remove('hidden');$('refreshTop').classList.remove('hidden');$('myOnlyBtn').classList.toggle('hidden',p.side!=='cleaning');$('directorAdminCard').classList.toggle('hidden',p.role!=='director');await loadAll();await initPushUi();startAutoRefresh()}catch(e){msg($('loginMsg'),errText(e),'error')}}
+async function enterApp(){try{const {data:{user}}=await supabase.auth.getUser();if(!user)return;const {data:p,error}=await supabase.from('profiles').select('*').eq('id',user.id).single();if(error)throw error;profile=p;$('who').textContent=p.full_name;$('role').textContent=`${sideRu[p.side]||p.side} · ${roleRu[p.role]||p.role}`;$('profileName').textContent=p.full_name;$('profileRole').textContent=`${sideRu[p.side]||p.side} · ${roleRu[p.role]||p.role}`;$('profileEmail').textContent=p.email||user.email||'';$('loginCard').classList.add('hidden');$('app').classList.remove('hidden');$('bottomNav').classList.remove('hidden');$('refreshTop').classList.remove('hidden');$('myOnlyBtn').classList.toggle('hidden',p.side!=='cleaning');$('directorAdminCard').classList.toggle('hidden',p.role!=='director');$('developerAdminCard').classList.toggle('hidden',p.role!=='developer');await loadAll();await initPushUi();startAutoRefresh()}catch(e){msg($('loginMsg'),errText(e),'error')}}
 function startAutoRefresh(){if(autoRefreshHandle)clearInterval(autoRefreshHandle);autoRefreshHandle=setInterval(()=>{if(!document.hidden)loadAll(false)},30000)}
 
 async function loadAll(showErrors=true){try{const [o,z,i,p,ou]=await Promise.all([
  supabase.from('objects').select('*').eq('is_active',true).order('name'),
  supabase.from('object_zones').select('*').eq('is_active',true).order('sort_order'),
- supabase.from('issues').select('*').order('created_at',{ascending:false}),
+ supabase.from('issues').select('*').is('deleted_at',null).order('created_at',{ascending:false}),
  supabase.from('profiles').select('id,full_name,email,phone,company_name,role,side,is_active'),
  supabase.from('object_users').select('object_id,user_id')
 ]);for(const x of [o,z,i,p,ou])if(x.error)throw x.error;objects=o.data||[];zones=z.data||[];issues=i.data||[];profiles=p.data||[];objectUsers=ou.data||[];if(!selectedObjectId||!objects.some(o=>o.id===selectedObjectId))selectedObjectId=objects[0]?.id||null;renderAll()}catch(e){if(showErrors)alert('Ошибка загрузки: '+errText(e))}}
@@ -500,7 +541,7 @@ function chooseObject(id){selectedObjectId=id;selectedIssueId=null;selectedInspe
 
 function slaSuccessPercent(arr){const closed=arr.filter(i=>i.status==='closed'&&i.closed_at);if(!closed.length)return null;const ok=closed.filter(i=>{const limit=objectSla(i.object_id).resolve*60000;return new Date(i.closed_at).getTime()-new Date(i.created_at).getTime()<=limit}).length;return Math.round(ok*100/closed.length)}
 function renderDashboard(){
- const scope=profile?.role==='director'?'Все доступные объекты':`${objects.length} доступн. объект(а)`;
+ const scope=['director','developer'].includes(profile?.role)?'Все доступные объекты':`${objects.length} доступн. объект(а)`;
  $('dashboardScope').textContent=scope;
  $('dashboardHello').textContent=profile?.full_name?`Добрый день, ${profile.full_name.split(' ')[0]}!`:'Добрый день';
  const open=issues.filter(isOpen),fresh=issues.filter(i=>i.status==='new'),awaiting=issues.filter(i=>i.status==='awaiting_approval'),late=issues.filter(isLate);
@@ -538,7 +579,7 @@ function renderZones(){
  $('objectZoneCount').textContent=`${zs.length} ${zs.length===1?'зона':zs.length>=2&&zs.length<=4?'зоны':'зон'}`;
  $('zones').innerHTML=zs.length?zs.map(z=>{const za=arr.filter(i=>i.zone_id===z.id),zo=za.filter(isOpen).length,zl=za.filter(isLate).length;return `<div class="zoneRich" data-zone-id="${z.id}"><div class="zoneRichTop"><div class="zoneRichName">${esc(z.name)}</div><span class="pill gray">${z.sort_order}</span></div><div class="zoneRichStats"><span class="zoneMetric open">Активных: ${zo}</span>${zl?`<span class="zoneMetric hot">Просрочено: ${zl}</span>`:`<span class="zoneMetric">Просрочек: 0</span>`}</div></div>`}).join(''):'<div class="small">Для выбранного объекта зон нет</div>';
  $('zones').querySelectorAll('[data-zone-id]').forEach(el=>el.onclick=()=>{statusFilter='all';searchText=zoneName(el.dataset.zoneId).toLowerCase();$('searchIssue').value=zoneName(el.dataset.zoneId);switchScreen('issues');renderIssues()});
- const sla=objectSla(o.id);$('slaObjectName').textContent=o.name;$('slaAcceptView').textContent=sla.accept;$('slaLeadView').textContent=sla.lead;$('slaResolveView').textContent=sla.resolve;$('slaForm').classList.toggle('hidden',profile?.role!=='director');if(profile?.role==='director'){$('slaAccept').value=sla.accept;$('slaLead').value=sla.lead;$('slaResolve').value=sla.resolve}
+ const sla=objectSla(o.id);$('slaObjectName').textContent=o.name;$('slaAcceptView').textContent=sla.accept;$('slaLeadView').textContent=sla.lead;$('slaResolveView').textContent=sla.resolve;const canEditSla=['director','developer'].includes(profile?.role);$('slaForm').classList.toggle('hidden',!canEditSla);if(canEditSla){$('slaAccept').value=sla.accept;$('slaLead').value=sla.lead;$('slaResolve').value=sla.resolve}
  const q=quality===null?0:quality,angle=Math.round(q*3.6);$('objectQualityRing').style.setProperty('--quality-angle',`${angle}deg`);$('objectQualityRingValue').textContent=quality===null?'—':`${quality}%`;$('objectQualityLabel').textContent=quality===null?'Недостаточно данных':quality>=95?'Отличное соблюдение SLA':quality>=80?'Стабильное качество':'Требует внимания';
  const assignedIds=objectUsers.filter(x=>x.object_id===o.id).map(x=>x.user_id), assigned=profiles.filter(p=>assignedIds.includes(p.id));
  const roleOrder={object_manager:1,regional_manager:2,lead_manager:3,director:4,client_object:1,client_regional:2};
@@ -547,7 +588,7 @@ function renderZones(){
  $('objectResponsibleClient').innerHTML=personHtml(assigned.filter(p=>p.side==='client'));
  $('objectNewIssueBtn').onclick=openNewIssue;$('objectIssuesBtn').onclick=()=>{statusFilter='all';searchText='';$('searchIssue').value='';switchScreen('issues')};
 }
-function buildAlerts(){const out=[];for(const i of issues){if(i.status==='closed')continue;const age=ageMinutes(i),sla=objectSla(i.object_id),base={issueId:Number(i.id),objectId:i.object_id};if(profile?.side==='client'){if(i.status==='awaiting_approval')out.push({...base,severity:'info',title:`Подтвердите устранение №${i.id}`,text:`${objectName(i.object_id)} · ${zoneName(i.zone_id)}`});continue}if(i.status==='returned'&&(i.responsible_id===profile?.id||['regional_manager','lead_manager','director'].includes(profile?.role)))out.push({...base,severity:'critical',title:`Замечание №${i.id} возвращено`,text:`${objectName(i.object_id)} · требуется повторное устранение`});if(profile?.role==='object_manager'&&i.status==='new')out.push({...base,severity:isAcceptLate(i)?'critical':'warning',title:`Новое замечание №${i.id}`,text:`${zoneName(i.zone_id)} · ${age} мин с создания`});if(profile?.role==='regional_manager'&&i.status==='new'&&age>=sla.accept)out.push({...base,severity:age>=sla.lead?'critical':'warning',title:`Не принято в срок: №${i.id}`,text:`Прошло ${age} мин · норматив ${sla.accept} мин`});if(profile?.role==='lead_manager'&&i.status==='new'&&age>=sla.lead)out.push({...base,severity:'critical',title:`Эскалация ведущему: №${i.id}`,text:`Не принято ${age} мин · порог ${sla.lead} мин`});if(profile?.role==='director'&&age>=sla.resolve)out.push({...base,severity:'critical',title:`Просрочено устранение №${i.id}`,text:`${objectName(i.object_id)} · ${age} мин при SLA ${sla.resolve}`});if(i.responsible_id===profile?.id&&i.status==='in_progress'&&age>=Math.max(1,sla.resolve-15)&&age<sla.resolve)out.push({...base,severity:'warning',title:`Срок устранения близко: №${i.id}`,text:`Осталось ${sla.resolve-age} мин`})}return out.sort((a,b)=>(a.severity==='critical'?0:1)-(b.severity==='critical'?0:1))}
+function buildAlerts(){const out=[];for(const i of issues){if(i.status==='closed')continue;const age=ageMinutes(i),sla=objectSla(i.object_id),base={issueId:Number(i.id),objectId:i.object_id};if(profile?.side==='client'){if(i.status==='awaiting_approval')out.push({...base,severity:'info',title:`Подтвердите устранение №${i.id}`,text:`${objectName(i.object_id)} · ${zoneName(i.zone_id)}`});continue}if(i.status==='returned'&&(i.responsible_id===profile?.id||['regional_manager','lead_manager','director','developer'].includes(profile?.role)))out.push({...base,severity:'critical',title:`Замечание №${i.id} возвращено`,text:`${objectName(i.object_id)} · требуется повторное устранение`});if(profile?.role==='object_manager'&&i.status==='new')out.push({...base,severity:isAcceptLate(i)?'critical':'warning',title:`Новое замечание №${i.id}`,text:`${zoneName(i.zone_id)} · ${age} мин с создания`});if(profile?.role==='regional_manager'&&i.status==='new'&&age>=sla.accept)out.push({...base,severity:age>=sla.lead?'critical':'warning',title:`Не принято в срок: №${i.id}`,text:`Прошло ${age} мин · норматив ${sla.accept} мин`});if(profile?.role==='lead_manager'&&i.status==='new'&&age>=sla.lead)out.push({...base,severity:'critical',title:`Эскалация ведущему: №${i.id}`,text:`Не принято ${age} мин · порог ${sla.lead} мин`});if(['director','developer'].includes(profile?.role)&&age>=sla.resolve)out.push({...base,severity:'critical',title:`Просрочено устранение №${i.id}`,text:`${objectName(i.object_id)} · ${age} мин при SLA ${sla.resolve}`});if(i.responsible_id===profile?.id&&i.status==='in_progress'&&age>=Math.max(1,sla.resolve-15)&&age<sla.resolve)out.push({...base,severity:'warning',title:`Срок устранения близко: №${i.id}`,text:`Осталось ${sla.resolve-age} мин`})}return out.sort((a,b)=>(a.severity==='critical'?0:1)-(b.severity==='critical'?0:1))}
 function renderAlerts(){const arr=buildAlerts();$('alertTotalPill').textContent=arr.length;$('alertBadge').textContent=arr.length;$('alertBadge').classList.toggle('hidden',!arr.length);$('alerts').innerHTML=arr.length?arr.map(a=>`<div class="alertCard ${a.severity==='critical'?'critical':a.severity==='info'?'info':''}" data-alert-iid="${a.issueId}"><div class="row between"><div class="alertTitle">${esc(a.title)}</div><span class="pill ${a.severity==='critical'?'red':a.severity==='info'?'blue':'orange'}">${a.severity==='critical'?'Срочно':a.severity==='info'?'Действие':'Внимание'}</span></div><div class="small" style="margin-top:5px">${esc(a.text)}</div></div>`).join(''):'<div class="ok">Сейчас нет уведомлений, требующих действия.</div>';$('alerts').querySelectorAll('[data-alert-iid]').forEach(el=>el.onclick=()=>openIssue(Number(el.dataset.alertIid)))}
 
 
@@ -889,8 +930,8 @@ $('issueForm').addEventListener('submit',async e=>{if(e.submitter?.value==='canc
 async function uploadPhoto(objectId,issueId,type,file){const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';const path=`${objectId}/${issueId}/${Date.now()}_${type}.${ext}`;const up=await supabase.storage.from('issue-photos').upload(path,file,{upsert:false,contentType:file.type||undefined});if(up.error)throw up.error;const {data:{user}}=await supabase.auth.getUser();const ins=await supabase.from('issue_photos').insert({issue_id:issueId,uploaded_by:user.id,photo_type:type,storage_path:path});if(ins.error)throw ins.error;return path}
 async function photoUrls(issueId){const {data,error}=await supabase.from('issue_photos').select('*').eq('issue_id',issueId).order('created_at');if(error)throw error;const out=[];for(const p of data||[]){const {data:s,error:se}=await supabase.storage.from('issue-photos').createSignedUrl(p.storage_path,3600);if(!se&&s?.signedUrl)out.push({...p,url:s.signedUrl})}return out}
 async function issueEvents(issueId){const {data,error}=await supabase.from('issue_events').select('*').eq('issue_id',issueId).order('created_at',{ascending:false});if(error)throw error;return data||[]}
-async function openIssue(id){selectedIssueId=id;let i=issues.find(x=>Number(x.id)===Number(id));if(!i)return;switchScreen('detail');$('issueDetail').innerHTML='<div class="small">Загрузка...</div>';try{const [photos,events]=await Promise.all([photoUrls(id),issueEvents(id)]);i=issues.find(x=>Number(x.id)===Number(id))||i;let actions='';const cleaning=profile.side==='cleaning',client=profile.side==='client';if(cleaning&&i.status==='new')actions=`<button class="primary" id="acceptBtn">Принять</button>`;else if(cleaning&&(i.status==='accepted'||i.status==='returned'))actions=`<button class="primary" id="startBtn">Начать / продолжить</button>`;else if(cleaning&&i.status==='in_progress')actions=`<button class="primary" id="afterBtn">Фото ПОСЛЕ и передать</button>`;else if(client&&i.status==='awaiting_approval')actions=`<button class="primary" id="approveBtn">Подтвердить устранение</button><button class="danger" id="returnBtn">Вернуть в работу</button>`;const before=photos.filter(p=>p.photo_type==='before'),after=photos.filter(p=>p.photo_type==='after');$('issueDetail').innerHTML=`<div class="row between"><div><div class="sectionTitle">Замечание №${i.id}</div><div class="small" style="margin-top:4px">${esc(objectName(i.object_id))} · ${new Date(i.created_at).toLocaleString('ru-RU')}</div></div><span class="pill ${statusClass(i.status)}">${esc(statusRu[i.status]||i.status)}</span></div>${isLate(i)?`<div class="note" style="margin-top:12px">⚠ SLA устранения ${objectSla(i.object_id).resolve} мин превышен. С момента создания: ${ageLabel(i)}.</div>`:isAcceptLate(i)?`<div class="note" style="margin-top:12px">⚠ Замечание не принято в норматив ${objectSla(i.object_id).accept} мин. Прошло: ${ageLabel(i)}.</div>`:''}<div class="detailBlock" style="margin-top:12px"><div><b>Зона:</b> ${esc(zoneName(i.zone_id))}</div><div><b>Категория:</b> ${esc(i.category)}</div><div><b>Автор:</b> ${esc(userName(i.author_id))}</div><div><b>Ответственный:</b> ${esc(userName(i.responsible_id))}</div><div><b>Возраст:</b> ${ageLabel(i)}</div><div style="margin-top:8px"><b>Описание:</b><br>${esc(i.description)}</div></div><div class="subTitle" style="margin-top:18px">Фото ДО / ПОСЛЕ</div><div class="photoGrid"><div><div class="small" style="margin-bottom:6px">ДО</div>${before.length?before.map(p=>`<img class="photo" src="${p.url}" alt="Фото до">`).join(''):'<div class="photoEmpty">Фото не приложено</div>'}</div><div><div class="small" style="margin-bottom:6px">ПОСЛЕ</div>${after.length?after.map(p=>`<img class="photo" src="${p.url}" alt="Фото после">`).join(''):'<div class="photoEmpty">Пока нет</div>'}</div></div>${actions?`<div class="row" style="margin-top:18px">${actions}</div>`:''}<div class="subTitle" style="margin-top:20px">История</div><div class="timeline">${events.map(ev=>`<div class="event"><b>${esc(ev.comment||ev.event_type)}</b><div class="small">${esc(userName(ev.actor_id))} · ${new Date(ev.created_at).toLocaleString('ru-RU')}</div></div>`).join('')||'<div class="small">Истории нет</div>'}</div><div style="margin-top:18px"><button class="neutral" id="backBtn">← К замечаниям</button></div>`;
-$('backBtn').onclick=()=>switchScreen('issues');if($('acceptBtn'))$('acceptBtn').onclick=()=>rpcAction('accept_issue',{p_issue_id:id});if($('startBtn'))$('startBtn').onclick=()=>rpcAction('start_issue',{p_issue_id:id});if($('afterBtn'))$('afterBtn').onclick=()=>{$('afterPhoto').value='';$('afterDialog').showModal()};if($('approveBtn'))$('approveBtn').onclick=()=>rpcAction('approve_issue',{p_issue_id:id});if($('returnBtn'))$('returnBtn').onclick=()=>{$('returnReason').value='';$('returnDialog').showModal()}}catch(e){$('issueDetail').innerHTML=`<div class="error">${esc(errText(e))}</div>`}}
+async function openIssue(id){selectedIssueId=id;let i=issues.find(x=>Number(x.id)===Number(id));if(!i)return;switchScreen('detail');$('issueDetail').innerHTML='<div class="small">Загрузка...</div>';try{const [photos,events]=await Promise.all([photoUrls(id),issueEvents(id)]);i=issues.find(x=>Number(x.id)===Number(id))||i;let actions='';const cleaning=profile.side==='cleaning',client=profile.side==='client';if(cleaning&&i.status==='new')actions=`<button class="primary" id="acceptBtn">Принять</button>`;else if(cleaning&&(i.status==='accepted'||i.status==='returned'))actions=`<button class="primary" id="startBtn">Начать / продолжить</button>`;else if(cleaning&&i.status==='in_progress')actions=`<button class="primary" id="afterBtn">Фото ПОСЛЕ и передать</button>`;else if(client&&i.status==='awaiting_approval')actions=`<button class="primary" id="approveBtn">Подтвердить устранение</button><button class="danger" id="returnBtn">Вернуть в работу</button>`;const before=photos.filter(p=>p.photo_type==='before'),after=photos.filter(p=>p.photo_type==='after');const developerActions=isDeveloper()?`<button class="dangerGhost" id="developerDeleteIssueBtn">Удалить в корзину</button>`:'';$('issueDetail').innerHTML=`<div class="row between"><div><div class="sectionTitle">Замечание №${i.id}</div><div class="small" style="margin-top:4px">${esc(objectName(i.object_id))} · ${new Date(i.created_at).toLocaleString('ru-RU')}</div></div><span class="pill ${statusClass(i.status)}">${esc(statusRu[i.status]||i.status)}</span></div>${isLate(i)?`<div class="note" style="margin-top:12px">⚠ SLA устранения ${objectSla(i.object_id).resolve} мин превышен. С момента создания: ${ageLabel(i)}.</div>`:isAcceptLate(i)?`<div class="note" style="margin-top:12px">⚠ Замечание не принято в норматив ${objectSla(i.object_id).accept} мин. Прошло: ${ageLabel(i)}.</div>`:''}<div class="detailBlock" style="margin-top:12px"><div><b>Зона:</b> ${esc(zoneName(i.zone_id))}</div><div><b>Категория:</b> ${esc(i.category)}</div><div><b>Автор:</b> ${esc(userName(i.author_id))}</div><div><b>Ответственный:</b> ${esc(userName(i.responsible_id))}</div><div><b>Возраст:</b> ${ageLabel(i)}</div><div style="margin-top:8px"><b>Описание:</b><br>${esc(i.description)}</div></div><div class="subTitle" style="margin-top:18px">Фото ДО / ПОСЛЕ</div><div class="photoGrid"><div><div class="small" style="margin-bottom:6px">ДО</div>${before.length?before.map(p=>`<img class="photo" src="${p.url}" alt="Фото до">`).join(''):'<div class="photoEmpty">Фото не приложено</div>'}</div><div><div class="small" style="margin-bottom:6px">ПОСЛЕ</div>${after.length?after.map(p=>`<img class="photo" src="${p.url}" alt="Фото после">`).join(''):'<div class="photoEmpty">Пока нет</div>'}</div></div>${(actions||developerActions)?`<div class="row" style="margin-top:18px">${actions}${developerActions}</div>`:''}<div class="subTitle" style="margin-top:20px">История</div><div class="timeline">${events.map(ev=>`<div class="event"><b>${esc(ev.comment||ev.event_type)}</b><div class="small">${esc(userName(ev.actor_id))} · ${new Date(ev.created_at).toLocaleString('ru-RU')}</div></div>`).join('')||'<div class="small">Истории нет</div>'}</div><div style="margin-top:18px"><button class="neutral" id="backBtn">← К замечаниям</button></div>`;
+$('backBtn').onclick=()=>switchScreen('issues');if($('acceptBtn'))$('acceptBtn').onclick=()=>rpcAction('accept_issue',{p_issue_id:id});if($('startBtn'))$('startBtn').onclick=()=>rpcAction('start_issue',{p_issue_id:id});if($('afterBtn'))$('afterBtn').onclick=()=>{$('afterPhoto').value='';$('afterDialog').showModal()};if($('approveBtn'))$('approveBtn').onclick=()=>rpcAction('approve_issue',{p_issue_id:id});if($('returnBtn'))$('returnBtn').onclick=()=>{$('returnReason').value='';$('returnDialog').showModal()};if($('developerDeleteIssueBtn'))$('developerDeleteIssueBtn').onclick=()=>openDeveloperDeleteIssueDialog(id)}catch(e){$('issueDetail').innerHTML=`<div class="error">${esc(errText(e))}</div>`}}
 async function rpcAction(name,args){try{const {error}=await supabase.rpc(name,args);if(error)throw error;await loadAll();await openIssue(selectedIssueId)}catch(e){alert('Ошибка: '+errText(e))}}
 $('afterForm').addEventListener('submit',async e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();try{const file=$('afterPhoto').files[0];if(!file)throw new Error('Добавьте фото');const i=issues.find(x=>Number(x.id)===Number(selectedIssueId));await uploadPhoto(i.object_id,i.id,'after',file);const {error}=await supabase.rpc('submit_issue_for_approval',{p_issue_id:i.id});if(error)throw error;$('afterDialog').close();await loadAll();await openIssue(i.id)}catch(e){alert('Ошибка: '+errText(e))}});
 $('returnForm').addEventListener('submit',async e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();const reason=$('returnReason').value.trim();if(!reason)return;try{const {error}=await supabase.rpc('return_issue',{p_issue_id:selectedIssueId,p_reason:reason});if(error)throw error;$('returnDialog').close();await loadAll();await openIssue(selectedIssueId)}catch(e){alert('Ошибка: '+errText(e))}});
@@ -909,7 +950,7 @@ function adminAssignedObjects(uid){return adminObjectUsers.filter(x=>x.user_id==
 function adminObjectLabel(id){return adminObjects.find(o=>o.id===id)?.name||'—'}
 
 async function loadAdminData(){
-  if(profile?.role!=='director'){switchScreen('profile');return}
+  if(!isSystemAdmin()){switchScreen('profile');return}
   try{
     $('adminUsersList').innerHTML='<div class="small">Загрузка...</div>';
     $('adminObjectsList').innerHTML='<div class="small">Загрузка...</div>';
@@ -921,16 +962,26 @@ async function loadAdminData(){
     ]);
     for(const x of [u,o,z,ou])if(x.error)throw x.error;
     adminProfiles=u.data||[];adminObjects=o.data||[];adminZones=z.data||[];adminObjectUsers=ou.data||[];
+    $('adminScreenTitle').textContent=isDeveloper()?'Системное управление':'Управление';
+    $('adminAccessHint').textContent=isDeveloper()?'Скрытая панель разработчика · полный административный доступ':'Доступно только директору';
+    $('adminTrashTab').classList.toggle('hidden',!isDeveloper());$('adminAuditTab').classList.toggle('hidden',!isDeveloper());
+    if(!isDeveloper()&&['trash','audit'].includes(adminPane))adminPane='users';
+    if(isDeveloper())await loadDeveloperSystemData();
     renderAdmin();
   }catch(e){$('adminUsersList').innerHTML=`<div class="error">${esc(errText(e))}</div>`}
 }
 function renderAdmin(){
-  $('adminUsersTab').classList.toggle('active',adminPane==='users');$('adminObjectsTab').classList.toggle('active',adminPane==='objects');
-  $('adminUsersPane').classList.toggle('hidden',adminPane!=='users');$('adminObjectsPane').classList.toggle('hidden',adminPane!=='objects');
-  if(adminPane==='users')renderAdminUsers();else renderAdminObjects();
+  $('adminUsersTab').classList.toggle('active',adminPane==='users');$('adminObjectsTab').classList.toggle('active',adminPane==='objects');$('adminTrashTab').classList.toggle('active',adminPane==='trash');$('adminAuditTab').classList.toggle('active',adminPane==='audit');
+  $('adminUsersPane').classList.toggle('hidden',adminPane!=='users');$('adminObjectsPane').classList.toggle('hidden',adminPane!=='objects');$('adminTrashPane').classList.toggle('hidden',adminPane!=='trash');$('adminAuditPane').classList.toggle('hidden',adminPane!=='audit');
+  if(adminPane==='users')renderAdminUsers();else if(adminPane==='objects')renderAdminObjects();else if(adminPane==='trash')renderDeveloperTrash();else if(adminPane==='audit')renderDeveloperAudit();
 }
 function renderAdminUsers(){
-  const list=adminProfiles.map(u=>{const ids=adminAssignedObjects(u.id),labels=ids.map(adminObjectLabel);return `<div class="adminCard"><div class="adminCardHead"><div><b>${esc(u.full_name)}</b><div class="small" style="margin-top:3px">${esc(u.email||'')} ${u.phone?`· ${esc(u.phone)}`:''}</div></div><span class="pill ${u.is_active?'blue':'gray'}">${u.is_active?'Активен':'Отключён'}</span></div><div class="adminMeta"><span class="pill">${esc(adminSideLabel(u.side))}</span><span class="pill gray">${esc(adminRoleLabel(u.role))}</span></div><div class="small" style="margin-top:9px"><b>Объекты:</b> ${u.role==='director'?'Все объекты':esc(labels.join(', ')||'не назначены')}</div><div class="adminActions"><button class="ghost" data-edit-user="${u.id}">Редактировать</button></div></div>`}).join('');
+  const list=adminProfiles.map(u=>{
+    const ids=adminAssignedObjects(u.id),labels=ids.map(adminObjectLabel),dev=u.role==='developer';
+    const access=dev?'Глобальный системный доступ':u.role==='director'?'Все объекты':esc(labels.join(', ')||'не назначены');
+    const actions=dev?'':`<div class="adminActions"><button class="ghost" data-edit-user="${u.id}">Редактировать</button></div>`;
+    return `<div class="adminCard ${dev?'developerAccount':''}"><div class="adminCardHead"><div><b>${esc(u.full_name)}</b><div class="small" style="margin-top:3px">${esc(u.email||'')} ${u.phone?`· ${esc(u.phone)}`:''}</div></div><span class="pill ${u.is_active?'blue':'gray'}">${u.is_active?'Активен':'Отключён'}</span></div><div class="adminMeta"><span class="pill">${esc(adminSideLabel(u.side))}</span><span class="pill ${dev?'red':'gray'}">${dev?'Системная учётная запись':esc(adminRoleLabel(u.role))}</span></div><div class="small" style="margin-top:9px"><b>Объекты:</b> ${access}</div>${actions}</div>`
+  }).join('');
   $('adminUsersList').innerHTML=list||'<div class="adminEmpty">Пользователей нет</div>';
   $('adminUsersList').querySelectorAll('[data-edit-user]').forEach(b=>b.onclick=()=>openAdminUserDialog(b.dataset.editUser));
 }
@@ -941,9 +992,12 @@ function renderAdminObjects(){
   $('adminObjectsList').querySelectorAll('[data-zones-object]').forEach(b=>b.onclick=()=>openAdminZones(b.dataset.zonesObject));
 }
 $('openAdminBtn').onclick=()=>{adminPane='users';switchScreen('admin')};
+$('openDeveloperAdminBtn').onclick=()=>{adminPane='users';switchScreen('admin')};
 $('adminBackBtn').onclick=()=>switchScreen('profile');
 $('adminUsersTab').onclick=()=>{adminPane='users';renderAdmin()};
 $('adminObjectsTab').onclick=()=>{adminPane='objects';renderAdmin()};
+$('adminTrashTab').onclick=()=>{if(!isDeveloper())return;adminPane='trash';renderAdmin()};
+$('adminAuditTab').onclick=()=>{if(!isDeveloper())return;adminPane='audit';renderAdmin()};
 $('addUserBtn').onclick=()=>openAdminUserDialog();
 $('addObjectBtn').onclick=()=>openAdminObjectDialog();
 
@@ -955,7 +1009,7 @@ function fillAdminRoleOptions(preferred){
 }
 function renderAdminObjectChecks(selectedIds){
   const role=$('adminUserRole').value;const selected=selectedIds??[...document.querySelectorAll('#adminUserObjects input:checked')].map(x=>x.value);
-  if(role==='director'){$('adminUserObjects').innerHTML='<div class="small">Директор видит все объекты автоматически.</div>';return}
+  if(role==='director'||role==='developer'){$('adminUserObjects').innerHTML=`<div class="small">${role==='developer'?'Разработчик имеет глобальный доступ автоматически.':'Директор видит все объекты автоматически.'}</div>`;return}
   const single=singleObjectAdminRoles.has(role);
   $('adminUserObjects').innerHTML=adminObjects.filter(o=>o.is_active).map(o=>`<label class="checkItem"><input type="${single?'radio':'checkbox'}" name="adminObj" value="${o.id}" ${selected.includes(o.id)?'checked':''}><span><b>${esc(o.name)}</b><div class="small">${esc(o.address||'')}</div></span></label>`).join('')||'<div class="small">Нет активных объектов</div>';
 }
@@ -976,9 +1030,58 @@ function openZoneEdit(id=null){const z=id?adminZones.find(x=>x.id===id):null;$('
 $('zoneEditForm').addEventListener('submit',async e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();try{const {error}=await supabase.rpc('director_manage_zone',{p_zone_id:$('adminZoneId').value||null,p_object_id:$('adminZoneObjectId').value,p_name:$('adminZoneName').value.trim(),p_sort_order:Number($('adminZoneOrder').value||0),p_is_active:$('adminZoneActive').checked});if(error)throw error;$('zoneEditDialog').close();await loadAll();await loadAdminData();adminZonesObjectId=$('adminZoneObjectId').value;renderAdminZones()}catch(e){alert('Ошибка: '+errText(e))}});
 
 
+
+// ===== v1.6 Hidden Developer / SuperAdmin =====
+function developerZoneLabel(id){return adminZones.find(z=>z.id===id)?.name||zoneName(id)}
+function auditActionLabel(a){return ({issue_soft_delete:'Замечание перемещено в корзину',issue_restore:'Замечание восстановлено',issue_hard_delete:'Замечание удалено окончательно',user_create:'Создан пользователь',user_update:'Изменён пользователь',object_create:'Создан объект',object_update:'Изменён объект',zone_create:'Создана зона',zone_update:'Изменена зона',sla_update:'Изменён SLA'})[a]||a}
+function auditTargetLabel(row){if(row.target_user_id){const u=adminProfiles.find(x=>x.id===row.target_user_id);return u?`${u.full_name}${u.email?' · '+u.email:''}`:`Пользователь ${row.target_user_id}`}if(row.issue_id)return `Замечание №${row.issue_id}`;if(row.entity_type==='object')return adminObjectLabel(row.entity_id);return row.entity_id||'—'}
+function auditDetailsLabel(d){if(!d||typeof d!=='object')return '';const parts=[];if(d.reason)parts.push(`Причина: ${d.reason}`);if(d.name)parts.push(`Название: ${d.name}`);if(d.email)parts.push(`E-mail: ${d.email}`);if(d.role)parts.push(`Роль: ${adminRoleLabel(d.role)}`);if(d.is_active!==undefined)parts.push(`Активен: ${d.is_active?'да':'нет'}`);if(d.removed_photos!==undefined)parts.push(`Удалено фото: ${d.removed_photos}`);if(d.password_changed)parts.push('Пароль изменён');if(d.accept_minutes!==undefined)parts.push(`SLA: ${d.accept_minutes}/${d.lead_minutes}/${d.resolve_minutes} мин`);return parts.join(' · ')}
+
+async function loadDeveloperSystemData(){
+  if(!isDeveloper())return;
+  const [trash,audit]=await Promise.all([
+    supabase.from('issues').select('*').not('deleted_at','is',null).order('deleted_at',{ascending:false}).limit(500),
+    supabase.from('developer_audit_log').select('*').order('created_at',{ascending:false}).limit(300)
+  ]);
+  if(trash.error)throw trash.error;if(audit.error)throw audit.error;
+  developerTrash=trash.data||[];developerAudit=audit.data||[];
+}
+
+function renderDeveloperTrash(){
+  if(!isDeveloper())return;
+  $('trashCountPill').textContent=String(developerTrash.length);
+  $('developerTrashList').innerHTML=developerTrash.length?developerTrash.map(i=>`<div class="adminCard trashCard"><div class="adminCardHead"><div><b>Замечание №${i.id}</b><div class="small" style="margin-top:3px">${esc(adminObjectLabel(i.object_id))} · ${esc(developerZoneLabel(i.zone_id))}</div></div><span class="pill red">В корзине</span></div><div class="adminMeta"><span class="pill gray">${esc(statusRu[i.status]||i.status)}</span><span class="metric">Удалено: ${new Date(i.deleted_at).toLocaleString('ru-RU')}</span></div><div class="small" style="margin-top:8px"><b>${esc(i.category||'Без категории')}</b> · ${esc(i.description||'')}</div><div class="trashReason"><b>Причина:</b> ${esc(i.delete_reason||'не указана')}</div><div class="adminActions"><button class="primary" data-restore-issue="${i.id}">Восстановить</button><button class="danger" data-hard-delete-issue="${i.id}">Удалить окончательно</button></div></div>`).join(''):'<div class="adminEmpty">Корзина пуста</div>';
+  $('developerTrashList').querySelectorAll('[data-restore-issue]').forEach(b=>b.onclick=()=>restoreDeveloperIssue(Number(b.dataset.restoreIssue)));
+  $('developerTrashList').querySelectorAll('[data-hard-delete-issue]').forEach(b=>b.onclick=()=>openDeveloperHardDeleteDialog(Number(b.dataset.hardDeleteIssue)));
+}
+
+function renderDeveloperAudit(){
+  if(!isDeveloper())return;
+  $('developerAuditList').innerHTML=developerAudit.length?developerAudit.map(r=>{const d=auditDetailsLabel(r.details);return `<div class="auditRow"><div class="auditHead"><div><div class="auditAction">${esc(auditActionLabel(r.action))}</div><div class="small" style="margin-top:3px">${esc(auditTargetLabel(r))}</div></div><span class="small">${new Date(r.created_at).toLocaleString('ru-RU')}</span></div>${d?`<div class="auditDetails">${esc(d)}</div>`:''}</div>`}).join(''):'<div class="adminEmpty">Журнал пока пуст</div>';
+}
+
+function openDeveloperDeleteIssueDialog(id){
+  if(!isDeveloper())return;
+  const i=issues.find(x=>Number(x.id)===Number(id));if(!i)return;
+  $('developerDeleteIssueId').value=String(id);$('developerDeleteReason').value='';$('developerDeleteIssueInfo').textContent=`Замечание №${id} · ${objectName(i.object_id)} · ${zoneName(i.zone_id)}`;$('developerDeleteIssueDialog').showModal();
+}
+
+$('developerDeleteIssueForm').addEventListener('submit',async e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();if(!isDeveloper())return;const id=Number($('developerDeleteIssueId').value),reason=$('developerDeleteReason').value.trim();if(!reason)return;const btn=$('confirmDeveloperDeleteBtn');btn.disabled=true;try{const {error}=await supabase.rpc('developer_delete_issue',{p_issue_id:id,p_reason:reason});if(error)throw error;$('developerDeleteIssueDialog').close();selectedIssueId=null;await loadAll();switchScreen('issues')}catch(e){alert('Ошибка удаления: '+errText(e))}finally{btn.disabled=false}});
+
+async function restoreDeveloperIssue(id){
+  if(!isDeveloper())return;if(!confirm(`Восстановить замечание №${id}?`))return;
+  try{const {error}=await supabase.rpc('developer_restore_issue',{p_issue_id:id});if(error)throw error;await loadAll();await loadAdminData();adminPane='trash';renderAdmin()}catch(e){alert('Ошибка восстановления: '+errText(e))}
+}
+
+function openDeveloperHardDeleteDialog(id){
+  if(!isDeveloper())return;$('developerHardDeleteIssueId').value=String(id);$('developerHardDeleteCode').textContent=`№${id}`;$('developerHardDeleteConfirm').value='';$('developerHardDeleteDialog').showModal();
+}
+
+$('developerHardDeleteForm').addEventListener('submit',async e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();if(!isDeveloper())return;const id=Number($('developerHardDeleteIssueId').value),confirmValue=$('developerHardDeleteConfirm').value.trim();if(confirmValue!==String(id)){alert(`Для подтверждения введите ${id}`);return}const btn=$('confirmDeveloperHardDeleteBtn');btn.disabled=true;try{const {data,error}=await supabase.functions.invoke('developer-admin',{body:{operation:'hard_delete_issue',issue_id:id}});if(error)throw error;if(!data?.ok)throw new Error(data?.error||'Не удалось удалить замечание');$('developerHardDeleteDialog').close();await loadAll();await loadAdminData();adminPane='trash';renderAdmin();alert(`Замечание №${id} удалено окончательно. Удалено фото: ${data.removed_photos||0}.`)}catch(e){alert('Ошибка окончательного удаления: '+errText(e))}finally{btn.disabled=false}});
+
 // ===== v1.5 Плановые обходы и чек-листы =====
 const inspectionResultRu={pass:'Выполнено',fail:'Нарушение',na:'Не применимо'};
-function canManageInspections(){return profile?.side==='cleaning'&&['director','lead_manager','regional_manager'].includes(profile?.role)}
+function canManageInspections(){return profile?.side==='cleaning'&&['developer','director','lead_manager','regional_manager'].includes(profile?.role)}
 function inspectionTemplateById(id){return inspectionTemplates.find(x=>x.id===id)||null}
 function inspectionRunById(id){return inspectionRuns.find(x=>Number(x.id)===Number(id))||null}
 function inspectionZoneLabel(id){return inspectionZones.find(x=>x.id===id)?.name||zoneName(id)}
