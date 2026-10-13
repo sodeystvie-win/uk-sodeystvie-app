@@ -88,8 +88,9 @@ html,body{max-width:100%;overflow-x:hidden}
 .reportKpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin:14px 0}.reportKpi{border:1px solid var(--line);border-radius:15px;padding:13px;background:#fff;min-width:0}.reportKpi strong{display:block;font-size:23px;line-height:1;color:#17365f}.reportKpi span{display:block;font-size:11px;color:var(--muted);margin-top:6px;line-height:1.2}.reportKpi.bad strong{color:var(--red)}.reportKpi.good strong{color:#15825f}
 .reportGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.reportPanel{border:1px solid var(--line);border-radius:17px;padding:15px;background:#fff;min-width:0}.reportPanel.wide{grid-column:1/-1}.reportList{display:grid;gap:8px;margin-top:11px}.reportRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid #e7edf5;border-radius:13px;padding:11px;background:#fbfdff;min-width:0}.reportRow.click{cursor:pointer}.reportRow.click:hover{border-color:#b7cceb;background:#f7faff}.reportRowMain{min-width:0}.reportRowTitle{font-size:13px;font-weight:800;overflow-wrap:anywhere}.reportRowMeta{font-size:11px;color:var(--muted);margin-top:3px;overflow-wrap:anywhere}.reportRowStats{display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap}.reportMetric{font-size:10px;padding:4px 7px;border-radius:999px;background:#eef4f8;color:#5e7085;white-space:nowrap}.reportMetric.bad{background:#fff0f2;color:var(--red)}.reportMetric.good{background:#eaf8f2;color:#15825f}.reportMetric.blue{background:#eef5ff;color:#1e63aa}
 .reportTimeGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:11px}.reportTime{background:#f7f9fc;border-radius:13px;padding:12px;min-width:0}.reportTime b{display:block;font-size:18px;color:#17365f;overflow-wrap:anywhere}.reportTime span{font-size:10px;color:var(--muted);display:block;margin-top:4px}.reportStatus{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.reportEmpty{padding:18px 4px;color:var(--muted);font-size:12px;text-align:center}.reportLoading{padding:28px;text-align:center;color:var(--muted)}
+.reportExportBar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}.reportExportButtons{display:flex;gap:8px;flex-wrap:wrap}.reportExportButtons button{min-width:104px}.reportExportHint{font-size:11px;color:var(--muted)}
 @media(max-width:900px){.reportFilters{grid-template-columns:repeat(2,minmax(0,1fr))}.reportActions{grid-column:1/-1}.reportActions button{flex:1}.reportKpis{grid-template-columns:repeat(2,minmax(0,1fr))}.reportGrid{grid-template-columns:1fr}.reportPanel.wide{grid-column:auto}.bottomNav .navBtn{min-width:0}}
-@media(max-width:430px){.reportFilters{grid-template-columns:1fr}.reportActions{grid-column:auto}.reportTimeGrid{grid-template-columns:1fr}.bottomNav .navBtn{font-size:9.5px;padding-left:2px;padding-right:2px;white-space:nowrap;overflow:hidden}.bottomNav .navBtn b{font-size:17px}}
+@media(max-width:430px){.reportFilters{grid-template-columns:1fr}.reportActions{grid-column:auto}.reportTimeGrid{grid-template-columns:1fr}.reportExportBar{align-items:stretch}.reportExportButtons{width:100%}.reportExportButtons button{flex:1}.bottomNav .navBtn{font-size:9.5px;padding-left:2px;padding-right:2px;white-space:nowrap;overflow:hidden}.bottomNav .navBtn b{font-size:17px}}
 
 </style>
 </head>
@@ -231,6 +232,10 @@ html,body{max-width:100%;overflow-x:hidden}
               <div class="reportActions"><button class="primary" id="reportApplyBtn">Показать</button><button class="neutral" id="reportResetBtn">Текущий месяц</button></div>
             </div>
 
+            <div class="reportExportBar">
+              <div class="reportExportHint">Выгрузка формируется по выбранному периоду и объекту.</div>
+              <div class="reportExportButtons"><button class="neutral" id="reportExcelBtn">⇩ Excel</button><button class="neutral" id="reportPdfBtn">⇩ PDF</button></div>
+            </div>
             <div id="reportError" style="margin-top:12px"></div>
             <div id="reportContent">
               <div class="reportLoading">Выберите период и нажмите «Показать».</div>
@@ -524,6 +529,97 @@ async function loadAnalytics(showError=true){
     if(showError)msg($('reportError'),'Ошибка отчёта: '+errText(e),'error');
   }finally{analyticsLoading=false}
 }
+
+// ===== v1.4.1 Report export: Excel + PDF =====
+function reportExportContext(){
+  const a=analyticsData||{},p=a.period||{};
+  const select=$('reportObjectSelect');
+  const objectLabel=select&&select.selectedIndex>=0?select.options[select.selectedIndex].text:'Все доступные объекты';
+  return {a,p,objectLabel};
+}
+function safeFilePart(s){return String(s||'').replace(/[\\/:*?\"<>|]+/g,'_').replace(/\s+/g,' ').trim().slice(0,80)||'Отчет'}
+function reportFileName(ext){
+  const {p,objectLabel}=reportExportContext();
+  return `Отчет УК Содействие_${safeFilePart(objectLabel)}_${safeFilePart(p.from||$('reportFrom').value)}_${safeFilePart(p.to||$('reportTo').value)}.${ext}`;
+}
+function saveBlob(blob,name){
+  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.style.display='none';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove()},1500)
+}
+function loadExternalScript(src,check){
+  if(check())return Promise.resolve();
+  return new Promise((resolve,reject)=>{
+    const existing=[...document.scripts].find(x=>x.src===src);
+    if(existing){existing.addEventListener('load',()=>check()?resolve():reject(new Error('Библиотека не загрузилась')),{once:true});existing.addEventListener('error',()=>reject(new Error('Не удалось загрузить библиотеку')),{once:true});return}
+    const script=document.createElement('script');script.src=src;script.async=true;script.onload=()=>check()?resolve():reject(new Error('Библиотека не загрузилась'));script.onerror=()=>reject(new Error('Не удалось загрузить библиотеку'));document.head.appendChild(script)
+  })
+}
+function reportSummaryRows(){
+  const {a,p,objectLabel}=reportExportContext(),s=a.summary||{};
+  return [
+    ['УК «Содействие» — отчет по качеству клининговых услуг',''],
+    ['Период',`${p.from||$('reportFrom').value} — ${p.to||$('reportTo').value}`],
+    ['Объект',objectLabel],
+    ['', ''],
+    ['Показатель','Значение'],
+    ['Всего замечаний',Number(s.total||0)],
+    ['Открыто',Number(s.open||0)],
+    ['Закрыто',Number(s.closed||0)],
+    ['Просрочено',Number(s.overdue||0)],
+    ['Возвращались заказчиком',Number(s.returned||0)],
+    ['SLA выполнено',s.sla_percent===null||s.sla_percent===undefined?'—':`${s.sla_percent}%`],
+    ['Среднее время принятия',reportMinutes(s.avg_accept_minutes)],
+    ['До передачи заказчику',reportMinutes(s.avg_resolve_minutes)],
+    ['Полный цикл до закрытия',reportMinutes(s.avg_close_minutes)]
+  ]
+}
+async function exportReportExcel(){
+  if(!analyticsData){alert('Сначала сформируйте отчет кнопкой «Показать».');return}
+  const btn=$('reportExcelBtn'),old=btn.textContent;btn.disabled=true;btn.textContent='Готовим…';
+  try{
+    await loadExternalScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',()=>!!window.XLSX);
+    const {a}=reportExportContext(),wb=XLSX.utils.book_new();
+    const add=(name,rows,widths)=>{const ws=XLSX.utils.aoa_to_sheet(rows);if(widths)ws['!cols']=widths.map(w=>({wch:w}));XLSX.utils.book_append_sheet(wb,ws,name)};
+    add('Сводка',reportSummaryRows(),[34,34]);
+    add('Объекты', [['Объект','Всего','Открыто','Закрыто','Возвраты','Просрочено','SLA, %'],...(a.by_object||[]).map(x=>[x.object_name,Number(x.total||0),Number(x.open||0),Number(x.closed||0),Number(x.returned||0),Number(x.overdue||0),x.sla_percent??''])],[38,12,12,12,12,14,12]);
+    add('Зоны', [['Объект','Зона','Всего','Открыто','Закрыто','Возвраты','Просрочено'],...(a.by_zone||[]).map(x=>[x.object_name,x.zone_name,Number(x.total||0),Number(x.open||0),Number(x.closed||0),Number(x.returned||0),Number(x.overdue||0)])],[32,32,10,10,10,12,14]);
+    add('Ответственные', [['Ответственный','Всего','Открыто','Закрыто','Возвраты','Просрочено','Ср. принятие, мин','Ср. устранение, мин'],...(a.by_manager||[]).map(x=>[x.responsible_name||'Не назначен',Number(x.total||0),Number(x.open||0),Number(x.closed||0),Number(x.returned||0),Number(x.overdue||0),x.avg_accept_minutes??'',x.avg_resolve_minutes??''])],[32,10,10,10,12,14,20,22]);
+    add('Категории', [['Категория','Всего','Открыто','Просрочено'],...(a.by_category||[]).map(x=>[x.category||'Без категории',Number(x.total||0),Number(x.open||0),Number(x.overdue||0)])],[36,12,12,14]);
+    add('Статусы', [['Статус','Количество'],...(a.by_status||[]).map(x=>[reportStatusLabel(x.status),Number(x.total||0)])],[28,14]);
+    const out=XLSX.write(wb,{bookType:'xlsx',type:'array'});saveBlob(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),reportFileName('xlsx'));
+  }catch(e){alert('Не удалось выгрузить Excel: '+errText(e)+'\nПроверьте подключение к интернету и попробуйте снова.')}finally{btn.disabled=false;btn.textContent=old}
+}
+function pdfTable(title,headers,rows,widths){
+  if(!rows.length)return [{text:title,style:'sectionTitle',margin:[0,10,0,5]},{text:'Нет данных',color:'#6b7c90',fontSize:9}];
+  return [{text:title,style:'sectionTitle',margin:[0,10,0,5]},{table:{headerRows:1,widths:widths||headers.map(()=>'*'),body:[headers.map(x=>({text:x,style:'tableHeader'})),...rows.map(r=>r.map(x=>String(x??'—')))]},layout:'lightHorizontalLines',fontSize:8}]
+}
+async function exportReportPdf(){
+  if(!analyticsData){alert('Сначала сформируйте отчет кнопкой «Показать».');return}
+  const btn=$('reportPdfBtn'),old=btn.textContent;btn.disabled=true;btn.textContent='Готовим…';
+  try{
+    await loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/pdfmake.min.js',()=>!!window.pdfMake);
+    await loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/vfs_fonts.js',()=>!!window.pdfMake?.vfs);
+    const {a,p,objectLabel}=reportExportContext(),s=a.summary||{};
+    const content=[
+      {text:'Управляющая Компания «Содействие»',style:'company'},
+      {text:'Отчет по качеству клининговых услуг',style:'title'},
+      {text:`Период: ${p.from||$('reportFrom').value} — ${p.to||$('reportTo').value}`,style:'meta'},
+      {text:`Объект: ${objectLabel}`,style:'meta',margin:[0,0,0,10]},
+      {table:{widths:['*','*','*'],body:[
+        [{text:`Всего\n${Number(s.total||0)}`,style:'kpi'},{text:`Открыто\n${Number(s.open||0)}`,style:'kpi'},{text:`Закрыто\n${Number(s.closed||0)}`,style:'kpi'}],
+        [{text:`Просрочено\n${Number(s.overdue||0)}`,style:'kpi'},{text:`Возвращались\n${Number(s.returned||0)}`,style:'kpi'},{text:`SLA\n${s.sla_percent===null||s.sla_percent===undefined?'—':s.sla_percent+'%'}`,style:'kpi'}]
+      ]},layout:'lightHorizontalLines'},
+      {text:'Время реакции',style:'sectionTitle',margin:[0,12,0,5]},
+      {columns:[{text:`Принятие\n${reportMinutes(s.avg_accept_minutes)}`,style:'timeBox'},{text:`До передачи заказчику\n${reportMinutes(s.avg_resolve_minutes)}`,style:'timeBox'},{text:`Полный цикл\n${reportMinutes(s.avg_close_minutes)}`,style:'timeBox'}],columnGap:6},
+      ...pdfTable('По объектам',['Объект','Всего','Откр.','Закр.','Проср.','SLA'],(a.by_object||[]).map(x=>[x.object_name,x.total,x.open,x.closed,x.overdue,x.sla_percent===null||x.sla_percent===undefined?'—':x.sla_percent+'%']),['*',35,35,35,40,38]),
+      ...pdfTable('Проблемные зоны',['Объект','Зона','Всего','Откр.','Возв.','Проср.'],(a.by_zone||[]).map(x=>[x.object_name,x.zone_name,x.total,x.open,x.returned,x.overdue]),['*','*',32,32,34,38]),
+      ...pdfTable('Ответственные',['Ответственный','Всего','Откр.','Закр.','Проср.','Ср. принятие'],(a.by_manager||[]).map(x=>[x.responsible_name||'Не назначен',x.total,x.open,x.closed,x.overdue,reportMinutes(x.avg_accept_minutes)]),['*',32,32,32,38,55]),
+      ...pdfTable('Категории',['Категория','Всего','Открыто','Просрочено'],(a.by_category||[]).map(x=>[x.category||'Без категории',x.total,x.open,x.overdue]),['*',42,42,50])
+    ];
+    const doc={pageSize:'A4',pageOrientation:'landscape',pageMargins:[28,28,28,32],content,defaultStyle:{font:'Roboto',fontSize:9,color:'#25374d'},styles:{company:{fontSize:10,bold:true,color:'#1a7f6b'},title:{fontSize:17,bold:true,color:'#17365f',margin:[0,3,0,8]},meta:{fontSize:9,color:'#607086',margin:[0,0,0,3]},sectionTitle:{fontSize:11,bold:true,color:'#17365f'},tableHeader:{bold:true,fillColor:'#eef4f8',color:'#17365f'},kpi:{alignment:'center',bold:true,fontSize:10,margin:[3,6,3,6]},timeBox:{alignment:'center',fillColor:'#f5f8fb',margin:[5,7,5,7],fontSize:9}},footer:(current,count)=>({text:`Страница ${current} из ${count}`,alignment:'center',fontSize:8,color:'#8793a3',margin:[0,8,0,0]})};
+    const blob=await new Promise((resolve,reject)=>{try{pdfMake.createPdf(doc).getBlob(resolve)}catch(e){reject(e)}});saveBlob(blob,reportFileName('pdf'));
+  }catch(e){alert('Не удалось выгрузить PDF: '+errText(e)+'\nПроверьте подключение к интернету и попробуйте снова.')}finally{btn.disabled=false;btn.textContent=old}
+}
+
 function openReports(){initReportFilters();switchScreen('reports')}
 
 function switchScreen(name){activeScreen=name;document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));const map={dashboard:'screenDashboard',issues:'screenIssues',reports:'screenReports',alerts:'screenAlerts',zones:'screenZones',profile:'screenProfile',admin:'screenAdmin',detail:'screenIssueDetail'};$(map[name]).classList.add('active');document.querySelectorAll('.navBtn').forEach(b=>b.classList.toggle('active',b.dataset.screen===name));if(name==='dashboard')renderDashboard();if(name==='issues')renderIssues();if(name==='reports'){initReportFilters();loadAnalytics()}if(name==='zones')renderZones();if(name==='alerts')renderAlerts();if(name==='admin')loadAdminData();window.scrollTo({top:0,behavior:'smooth'})}
@@ -532,6 +628,8 @@ document.querySelectorAll('.navBtn').forEach(b=>b.onclick=()=>switchScreen(b.dat
 
 $('reportApplyBtn').onclick=()=>loadAnalytics();
 $('reportResetBtn').onclick=()=>{setCurrentMonthReportPeriod();$('reportObjectSelect').value='';loadAnalytics()};
+$('reportExcelBtn').onclick=exportReportExcel;
+$('reportPdfBtn').onclick=exportReportPdf;
 
 $('slaForm').addEventListener('submit',async e=>{e.preventDefault();const o=selectedObject();if(!o)return;const accept=Number($('slaAccept').value),lead=Number($('slaLead').value),resolve=Number($('slaResolve').value);try{const {error}=await supabase.rpc('update_object_sla',{p_object_id:o.id,p_accept_minutes:accept,p_lead_minutes:lead,p_resolve_minutes:resolve});if(error)throw error;await loadAll();alert('SLA сохранён')}catch(e){alert('Ошибка SLA: '+errText(e))}});
 $('newIssueBtn').onclick=()=>openNewIssue();
