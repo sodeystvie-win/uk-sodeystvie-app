@@ -80,6 +80,17 @@ html,body{max-width:100%;overflow-x:hidden}
 .checkGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.checkItem{display:flex;align-items:flex-start;gap:8px;border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff}.checkItem input{width:auto;margin-top:2px}.checkItem span{min-width:0;overflow-wrap:anywhere}
 .zoneAdminRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:13px;padding:11px;background:#fff}
 @media(max-width:600px){.checkGrid{grid-template-columns:1fr}.adminCardHead{flex-direction:column}.adminActions button{flex:1 1 auto}.zoneAdminRow{grid-template-columns:minmax(0,1fr)}}
+
+
+/* v1.4 — reports and analytics */
+.reportFilters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:10px;align-items:end;margin-top:14px}
+.reportFilters .field{margin:0}.reportActions{display:flex;gap:8px;align-items:center}
+.reportKpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin:14px 0}.reportKpi{border:1px solid var(--line);border-radius:15px;padding:13px;background:#fff;min-width:0}.reportKpi strong{display:block;font-size:23px;line-height:1;color:#17365f}.reportKpi span{display:block;font-size:11px;color:var(--muted);margin-top:6px;line-height:1.2}.reportKpi.bad strong{color:var(--red)}.reportKpi.good strong{color:#15825f}
+.reportGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.reportPanel{border:1px solid var(--line);border-radius:17px;padding:15px;background:#fff;min-width:0}.reportPanel.wide{grid-column:1/-1}.reportList{display:grid;gap:8px;margin-top:11px}.reportRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid #e7edf5;border-radius:13px;padding:11px;background:#fbfdff;min-width:0}.reportRow.click{cursor:pointer}.reportRow.click:hover{border-color:#b7cceb;background:#f7faff}.reportRowMain{min-width:0}.reportRowTitle{font-size:13px;font-weight:800;overflow-wrap:anywhere}.reportRowMeta{font-size:11px;color:var(--muted);margin-top:3px;overflow-wrap:anywhere}.reportRowStats{display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap}.reportMetric{font-size:10px;padding:4px 7px;border-radius:999px;background:#eef4f8;color:#5e7085;white-space:nowrap}.reportMetric.bad{background:#fff0f2;color:var(--red)}.reportMetric.good{background:#eaf8f2;color:#15825f}.reportMetric.blue{background:#eef5ff;color:#1e63aa}
+.reportTimeGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:11px}.reportTime{background:#f7f9fc;border-radius:13px;padding:12px;min-width:0}.reportTime b{display:block;font-size:18px;color:#17365f;overflow-wrap:anywhere}.reportTime span{font-size:10px;color:var(--muted);display:block;margin-top:4px}.reportStatus{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.reportEmpty{padding:18px 4px;color:var(--muted);font-size:12px;text-align:center}.reportLoading{padding:28px;text-align:center;color:var(--muted)}
+@media(max-width:900px){.reportFilters{grid-template-columns:repeat(2,minmax(0,1fr))}.reportActions{grid-column:1/-1}.reportActions button{flex:1}.reportKpis{grid-template-columns:repeat(2,minmax(0,1fr))}.reportGrid{grid-template-columns:1fr}.reportPanel.wide{grid-column:auto}.bottomNav .navBtn{min-width:0}}
+@media(max-width:430px){.reportFilters{grid-template-columns:1fr}.reportActions{grid-column:auto}.reportTimeGrid{grid-template-columns:1fr}.bottomNav .navBtn{font-size:9.5px;padding-left:2px;padding-right:2px;white-space:nowrap;overflow:hidden}.bottomNav .navBtn b{font-size:17px}}
+
 </style>
 </head>
 <body>
@@ -204,6 +215,29 @@ html,body{max-width:100%;overflow-x:hidden}
           </div>
         </section>
 
+
+
+        <section id="screenReports" class="screen">
+          <div class="card">
+            <div class="row between">
+              <div><div class="sectionTitle">Отчёты</div><div class="small" style="margin-top:3px">Качество, SLA и динамика замечаний</div></div>
+              <span class="pill blue" id="reportPeriodPill">Текущий месяц</span>
+            </div>
+
+            <div class="reportFilters">
+              <div class="field"><label>С даты</label><input id="reportFrom" type="date"></div>
+              <div class="field"><label>По дату</label><input id="reportTo" type="date"></div>
+              <div class="field"><label>Объект</label><select id="reportObjectSelect"><option value="">Все доступные объекты</option></select></div>
+              <div class="reportActions"><button class="primary" id="reportApplyBtn">Показать</button><button class="neutral" id="reportResetBtn">Текущий месяц</button></div>
+            </div>
+
+            <div id="reportError" style="margin-top:12px"></div>
+            <div id="reportContent">
+              <div class="reportLoading">Выберите период и нажмите «Показать».</div>
+            </div>
+          </div>
+        </section>
+
         <section id="screenAlerts" class="screen">
           <div class="card">
             <div class="row between"><div><div class="sectionTitle">Уведомления</div><div class="small" style="margin-top:3px">Требуют внимания прямо сейчас</div></div><span id="alertTotalPill" class="pill gray">0</span></div>
@@ -252,6 +286,7 @@ html,body{max-width:100%;overflow-x:hidden}
 <nav id="bottomNav" class="bottomNav hidden">
   <button class="navBtn active" data-screen="dashboard"><b>⌂</b>Сводка</button>
   <button class="navBtn" data-screen="issues"><b>☰</b>Замечания</button>
+  <button class="navBtn" data-screen="reports"><b>▥</b>Отчёты</button>
   <button class="navBtn" data-screen="alerts"><b>♢ <span id="alertBadge" class="badge hidden">0</span></b>Уведомления</button>
   <button class="navBtn" data-screen="zones"><b>▦</b>Объект</button>
   <button class="navBtn" data-screen="profile"><b>●</b>Профиль</button>
@@ -328,6 +363,7 @@ const $=id=>document.getElementById(id);
 let profile=null, objects=[], zones=[], issues=[], profiles=[], objectUsers=[], selectedObjectId=null, selectedIssueId=null;
 let adminProfiles=[], adminObjects=[], adminZones=[], adminObjectUsers=[], adminPane='users', adminZonesObjectId=null;
 let activeScreen='dashboard', statusFilter='all', searchText='', myOnly=false, autoRefreshHandle=null, deferredInstallPrompt=null;
+let analyticsData=null, analyticsLoading=false;
 const roleRu={director:'Директор',lead_manager:'Ведущий менеджер',regional_manager:'Региональный менеджер',object_manager:'Менеджер объекта',client_regional:'Региональное ответственное лицо',client_object:'Ответственное лицо заказчика'};
 const sideRu={cleaning:'Клининговая компания',client:'Заказчик'};
 const statusRu={new:'Новое',accepted:'Принято',in_progress:'В работе',awaiting_approval:'Ожидает подтверждения',returned:'Возвращено',closed:'Закрыто'};
@@ -420,8 +456,82 @@ function renderZones(){
 function buildAlerts(){const out=[];for(const i of issues){if(i.status==='closed')continue;const age=ageMinutes(i),sla=objectSla(i.object_id),base={issueId:Number(i.id),objectId:i.object_id};if(profile?.side==='client'){if(i.status==='awaiting_approval')out.push({...base,severity:'info',title:`Подтвердите устранение №${i.id}`,text:`${objectName(i.object_id)} · ${zoneName(i.zone_id)}`});continue}if(i.status==='returned'&&(i.responsible_id===profile?.id||['regional_manager','lead_manager','director'].includes(profile?.role)))out.push({...base,severity:'critical',title:`Замечание №${i.id} возвращено`,text:`${objectName(i.object_id)} · требуется повторное устранение`});if(profile?.role==='object_manager'&&i.status==='new')out.push({...base,severity:isAcceptLate(i)?'critical':'warning',title:`Новое замечание №${i.id}`,text:`${zoneName(i.zone_id)} · ${age} мин с создания`});if(profile?.role==='regional_manager'&&i.status==='new'&&age>=sla.accept)out.push({...base,severity:age>=sla.lead?'critical':'warning',title:`Не принято в срок: №${i.id}`,text:`Прошло ${age} мин · норматив ${sla.accept} мин`});if(profile?.role==='lead_manager'&&i.status==='new'&&age>=sla.lead)out.push({...base,severity:'critical',title:`Эскалация ведущему: №${i.id}`,text:`Не принято ${age} мин · порог ${sla.lead} мин`});if(profile?.role==='director'&&age>=sla.resolve)out.push({...base,severity:'critical',title:`Просрочено устранение №${i.id}`,text:`${objectName(i.object_id)} · ${age} мин при SLA ${sla.resolve}`});if(i.responsible_id===profile?.id&&i.status==='in_progress'&&age>=Math.max(1,sla.resolve-15)&&age<sla.resolve)out.push({...base,severity:'warning',title:`Срок устранения близко: №${i.id}`,text:`Осталось ${sla.resolve-age} мин`})}return out.sort((a,b)=>(a.severity==='critical'?0:1)-(b.severity==='critical'?0:1))}
 function renderAlerts(){const arr=buildAlerts();$('alertTotalPill').textContent=arr.length;$('alertBadge').textContent=arr.length;$('alertBadge').classList.toggle('hidden',!arr.length);$('alerts').innerHTML=arr.length?arr.map(a=>`<div class="alertCard ${a.severity==='critical'?'critical':a.severity==='info'?'info':''}" data-alert-iid="${a.issueId}"><div class="row between"><div class="alertTitle">${esc(a.title)}</div><span class="pill ${a.severity==='critical'?'red':a.severity==='info'?'blue':'orange'}">${a.severity==='critical'?'Срочно':a.severity==='info'?'Действие':'Внимание'}</span></div><div class="small" style="margin-top:5px">${esc(a.text)}</div></div>`).join(''):'<div class="ok">Сейчас нет уведомлений, требующих действия.</div>';$('alerts').querySelectorAll('[data-alert-iid]').forEach(el=>el.onclick=()=>openIssue(Number(el.dataset.alertIid)))}
 
-function switchScreen(name){activeScreen=name;document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));const map={dashboard:'screenDashboard',issues:'screenIssues',alerts:'screenAlerts',zones:'screenZones',profile:'screenProfile',admin:'screenAdmin',detail:'screenIssueDetail'};$(map[name]).classList.add('active');document.querySelectorAll('.navBtn').forEach(b=>b.classList.toggle('active',b.dataset.screen===name));if(name==='dashboard')renderDashboard();if(name==='issues')renderIssues();if(name==='zones')renderZones();if(name==='alerts')renderAlerts();if(name==='admin')loadAdminData();window.scrollTo({top:0,behavior:'smooth'})}
+
+// ===== v1.4 Reports and analytics =====
+function dateInputValue(d){
+  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function setCurrentMonthReportPeriod(){
+  const now=new Date(),first=new Date(now.getFullYear(),now.getMonth(),1);
+  $('reportFrom').value=dateInputValue(first);$('reportTo').value=dateInputValue(now);
+}
+function initReportFilters(){
+  if(!$('reportFrom').value||!$('reportTo').value)setCurrentMonthReportPeriod();
+  const current=$('reportObjectSelect').value;
+  $('reportObjectSelect').innerHTML='<option value="">Все доступные объекты</option>'+objects.map(o=>`<option value="${o.id}">${esc(o.name)}</option>`).join('');
+  if(current && objects.some(o=>o.id===current))$('reportObjectSelect').value=current;
+}
+function reportMinutes(v){
+  if(v===null||v===undefined||v==='')return '—';
+  const n=Number(v);if(!Number.isFinite(n))return '—';
+  if(n<60)return `${Math.round(n)} мин`;
+  if(n<1440){const h=Math.floor(n/60),m=Math.round(n%60);return m?`${h} ч ${m} мин`:`${h} ч`}
+  const d=Math.floor(n/1440),h=Math.round((n%1440)/60);return h?`${d} д ${h} ч`:`${d} д`;
+}
+function reportStatusLabel(s){return statusRu[s]||s}
+function renderAnalytics(data){
+  analyticsData=data||{};
+  const a=analyticsData,sm=a.summary||{},period=a.period||{};
+  $('reportPeriodPill').textContent=period.from&&period.to?`${new Date(period.from+'T00:00:00').toLocaleDateString('ru-RU')} — ${new Date(period.to+'T00:00:00').toLocaleDateString('ru-RU')}`:'Период';
+  const pct=sm.sla_percent===null||sm.sla_percent===undefined?'—':`${sm.sla_percent}%`;
+  const statuses=(a.by_status||[]).map(x=>`<span class="pill ${statusClass(x.status)}">${esc(reportStatusLabel(x.status))}: ${Number(x.total||0)}</span>`).join('');
+  const objectRows=(a.by_object||[]).map(x=>`<div class="reportRow click" data-report-oid="${x.object_id}"><div class="reportRowMain"><div class="reportRowTitle">${esc(x.object_name)}</div><div class="reportRowMeta">Всего: ${Number(x.total||0)} · Закрыто: ${Number(x.closed||0)}</div></div><div class="reportRowStats"><span class="reportMetric blue">Открыто ${Number(x.open||0)}</span>${Number(x.overdue||0)?`<span class="reportMetric bad">Проср. ${Number(x.overdue||0)}</span>`:''}<span class="reportMetric ${x.sla_percent!==null&&Number(x.sla_percent)>=90?'good':''}">SLA ${x.sla_percent===null||x.sla_percent===undefined?'—':x.sla_percent+'%'}</span></div></div>`).join('');
+  const zoneRows=(a.by_zone||[]).slice(0,12).map(x=>`<div class="reportRow"><div class="reportRowMain"><div class="reportRowTitle">${esc(x.zone_name)}</div><div class="reportRowMeta">${esc(x.object_name)} · Всего: ${Number(x.total||0)}</div></div><div class="reportRowStats"><span class="reportMetric blue">Открыто ${Number(x.open||0)}</span>${Number(x.returned||0)?`<span class="reportMetric">Возвратов ${Number(x.returned||0)}</span>`:''}${Number(x.overdue||0)?`<span class="reportMetric bad">Проср. ${Number(x.overdue||0)}</span>`:''}</div></div>`).join('');
+  const managerRows=(a.by_manager||[]).map(x=>`<div class="reportRow"><div class="reportRowMain"><div class="reportRowTitle">${esc(x.responsible_name||'Не назначен')}</div><div class="reportRowMeta">Всего: ${Number(x.total||0)} · Закрыто: ${Number(x.closed||0)} · Ср. принятие: ${esc(reportMinutes(x.avg_accept_minutes))}</div></div><div class="reportRowStats"><span class="reportMetric blue">Открыто ${Number(x.open||0)}</span>${Number(x.overdue||0)?`<span class="reportMetric bad">Проср. ${Number(x.overdue||0)}</span>`:''}</div></div>`).join('');
+  const categoryRows=(a.by_category||[]).map(x=>`<div class="reportRow"><div class="reportRowMain"><div class="reportRowTitle">${esc(x.category||'Без категории')}</div><div class="reportRowMeta">Всего замечаний: ${Number(x.total||0)}</div></div><div class="reportRowStats"><span class="reportMetric blue">Открыто ${Number(x.open||0)}</span>${Number(x.overdue||0)?`<span class="reportMetric bad">Проср. ${Number(x.overdue||0)}</span>`:''}</div></div>`).join('');
+  $('reportContent').innerHTML=`
+    <div class="reportKpis">
+      <div class="reportKpi"><strong>${Number(sm.total||0)}</strong><span>Всего замечаний</span></div>
+      <div class="reportKpi"><strong>${Number(sm.open||0)}</strong><span>Открыто</span></div>
+      <div class="reportKpi"><strong>${Number(sm.closed||0)}</strong><span>Закрыто</span></div>
+      <div class="reportKpi bad"><strong>${Number(sm.overdue||0)}</strong><span>Просрочено</span></div>
+      <div class="reportKpi"><strong>${Number(sm.returned||0)}</strong><span>Возвращались</span></div>
+      <div class="reportKpi good"><strong>${pct}</strong><span>SLA выполнено</span></div>
+    </div>
+    <div class="reportGrid">
+      <div class="reportPanel wide"><div class="row between"><div class="subTitle" style="margin:0">Статусы</div><span class="small">На дату формирования отчёта</span></div><div class="reportStatus">${statuses||'<span class="small">Нет данных</span>'}</div></div>
+      <div class="reportPanel"><div class="subTitle" style="margin:0">Время реакции</div><div class="reportTimeGrid"><div class="reportTime"><b>${esc(reportMinutes(sm.avg_accept_minutes))}</b><span>среднее принятие</span></div><div class="reportTime"><b>${esc(reportMinutes(sm.avg_resolve_minutes))}</b><span>до передачи заказчику</span></div><div class="reportTime"><b>${esc(reportMinutes(sm.avg_close_minutes))}</b><span>полный цикл до закрытия</span></div></div></div>
+      <div class="reportPanel"><div class="subTitle" style="margin:0">По объектам</div><div class="reportList">${objectRows||'<div class="reportEmpty">За выбранный период данных нет</div>'}</div></div>
+      <div class="reportPanel"><div class="row between"><div class="subTitle" style="margin:0">Проблемные зоны</div><span class="small">по числу замечаний</span></div><div class="reportList">${zoneRows||'<div class="reportEmpty">Нет данных по зонам</div>'}</div></div>
+      <div class="reportPanel"><div class="subTitle" style="margin:0">Ответственные</div><div class="reportList">${managerRows||'<div class="reportEmpty">Нет данных по ответственным</div>'}</div></div>
+      <div class="reportPanel wide"><div class="subTitle" style="margin:0">Категории замечаний</div><div class="reportList">${categoryRows||'<div class="reportEmpty">Нет данных по категориям</div>'}</div></div>
+    </div>`;
+  $('reportContent').querySelectorAll('[data-report-oid]').forEach(el=>el.onclick=()=>{chooseObject(el.dataset.reportOid);switchScreen('zones')});
+}
+async function loadAnalytics(showError=true){
+  if(analyticsLoading)return;analyticsLoading=true;
+  $('reportError').innerHTML='';$('reportContent').innerHTML='<div class="reportLoading">Формируем отчёт…</div>';
+  try{
+    initReportFilters();
+    const from=$('reportFrom').value,to=$('reportTo').value,oid=$('reportObjectSelect').value||null;
+    if(!from||!to)throw new Error('Укажите период отчёта');
+    if(from>to)throw new Error('Дата начала не может быть позже даты окончания');
+    const {data,error}=await supabase.rpc('analytics_report',{p_from:from,p_to:to,p_object_id:oid});
+    if(error)throw error;renderAnalytics(data);
+  }catch(e){
+    $('reportContent').innerHTML='';
+    if(showError)msg($('reportError'),'Ошибка отчёта: '+errText(e),'error');
+  }finally{analyticsLoading=false}
+}
+function openReports(){initReportFilters();switchScreen('reports')}
+
+function switchScreen(name){activeScreen=name;document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));const map={dashboard:'screenDashboard',issues:'screenIssues',reports:'screenReports',alerts:'screenAlerts',zones:'screenZones',profile:'screenProfile',admin:'screenAdmin',detail:'screenIssueDetail'};$(map[name]).classList.add('active');document.querySelectorAll('.navBtn').forEach(b=>b.classList.toggle('active',b.dataset.screen===name));if(name==='dashboard')renderDashboard();if(name==='issues')renderIssues();if(name==='reports'){initReportFilters();loadAnalytics()}if(name==='zones')renderZones();if(name==='alerts')renderAlerts();if(name==='admin')loadAdminData();window.scrollTo({top:0,behavior:'smooth'})}
 document.querySelectorAll('.navBtn').forEach(b=>b.onclick=()=>switchScreen(b.dataset.screen));
+
+
+$('reportApplyBtn').onclick=()=>loadAnalytics();
+$('reportResetBtn').onclick=()=>{setCurrentMonthReportPeriod();$('reportObjectSelect').value='';loadAnalytics()};
 
 $('slaForm').addEventListener('submit',async e=>{e.preventDefault();const o=selectedObject();if(!o)return;const accept=Number($('slaAccept').value),lead=Number($('slaLead').value),resolve=Number($('slaResolve').value);try{const {error}=await supabase.rpc('update_object_sla',{p_object_id:o.id,p_accept_minutes:accept,p_lead_minutes:lead,p_resolve_minutes:resolve});if(error)throw error;await loadAll();alert('SLA сохранён')}catch(e){alert('Ошибка SLA: '+errText(e))}});
 $('newIssueBtn').onclick=()=>openNewIssue();
