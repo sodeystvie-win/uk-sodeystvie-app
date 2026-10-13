@@ -92,6 +92,44 @@ html,body{max-width:100%;overflow-x:hidden}
 @media(max-width:900px){.reportFilters{grid-template-columns:repeat(2,minmax(0,1fr))}.reportActions{grid-column:1/-1}.reportActions button{flex:1}.reportKpis{grid-template-columns:repeat(2,minmax(0,1fr))}.reportGrid{grid-template-columns:1fr}.reportPanel.wide{grid-column:auto}.bottomNav .navBtn{min-width:0}}
 @media(max-width:430px){.reportFilters{grid-template-columns:1fr}.reportActions{grid-column:auto}.reportTimeGrid{grid-template-columns:1fr}.reportExportBar{align-items:stretch}.reportExportButtons{width:100%}.reportExportButtons button{flex:1}.bottomNav .navBtn{font-size:9.5px;padding-left:2px;padding-right:2px;white-space:nowrap;overflow:hidden}.bottomNav .navBtn b{font-size:17px}}
 
+
+
+/* ===== v1.5 Плановые обходы и чек-листы ===== */
+.inspectionHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.inspectionHeadActions{display:flex;gap:8px;flex-wrap:wrap}
+.inspectionSummary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}
+.inspectionMetric{background:#f5f8fd;border:1px solid var(--line);border-radius:15px;padding:12px}
+.inspectionMetric b{display:block;font-size:22px;color:var(--navy)}.inspectionMetric span{display:block;margin-top:3px;color:var(--muted);font-size:11px;font-weight:700}
+.inspectionTemplateGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+.inspectionTemplateCard{border:1px solid var(--line);border-radius:17px;padding:14px;background:#fff}
+.inspectionTemplateCard.inactive{opacity:.68;background:#f8f9fb}
+.inspectionTemplateTop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.inspectionTemplateName{font-weight:900;color:var(--navy);font-size:16px}
+.inspectionTemplateMeta{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.inspectionTemplateActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.inspectionTemplateActions button{flex:1;min-width:110px}
+.inspectionHistory{display:grid;gap:8px;margin-top:10px}
+.inspectionHistoryRow{border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;cursor:pointer}
+.inspectionHistoryRow:hover{background:#f7faff}
+.inspectionHistoryInfo{min-width:0}.inspectionHistoryName{font-weight:900;color:var(--navy)}
+.inspectionProgressWrap{margin:15px 0}.inspectionProgressTop{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:7px}
+.inspectionProgressBar{height:9px;border-radius:999px;background:#edf2f7;overflow:hidden}.inspectionProgressFill{height:100%;background:#2566c3;border-radius:inherit}
+.inspectionRunHead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.inspectionItems{display:grid;gap:10px;margin-top:12px}
+.inspectionItem{border:1px solid var(--line);border-radius:16px;padding:13px;background:#fff}
+.inspectionItem.fail{border-color:#f0bcbc;background:#fffafa}.inspectionItem.pass{border-color:#bddfc7;background:#fbfffc}.inspectionItem.na{background:#f8f9fb}
+.inspectionItemTop{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.inspectionItemTitle{font-weight:900;color:var(--navy)}
+.inspectionChoice{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.inspectionChoice button{padding:8px 11px;font-size:12px}.inspectionChoice button.selected{outline:2px solid #1e5cb4;outline-offset:1px}
+.inspectionResultNote{margin-top:9px;padding:9px 10px;background:#f6f8fb;border-radius:10px;font-size:12px}
+.inspectionPhotoThumb{width:88px;height:70px;object-fit:cover;border-radius:10px;border:1px solid var(--line);margin-top:8px}
+.inspectionRunFooter{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.inspectionManageList{display:grid;gap:9px;margin-top:12px}.inspectionManageRow{border:1px solid var(--line);border-radius:13px;padding:11px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.inspectionIssueLink{font-size:11px;padding:6px 9px}
+@media(max-width:900px){.inspectionTemplateGrid{grid-template-columns:1fr}.inspectionSummary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:430px){.bottomNav .navBtn{font-size:8px}.inspectionSummary{grid-template-columns:repeat(2,minmax(0,1fr))}.inspectionMetric{padding:10px}.inspectionTemplateActions button{min-width:0}.inspectionHistoryRow{align-items:flex-start}.inspectionRunFooter button{flex:1}}
+
 </style>
 </head>
 <body>
@@ -243,6 +281,19 @@ html,body{max-width:100%;overflow-x:hidden}
           </div>
         </section>
 
+
+
+        <section id="screenInspections" class="screen">
+          <div class="card">
+            <div class="inspectionHead">
+              <div><div class="sectionTitle">Обходы</div><div id="inspectionObjectHint" class="small" style="margin-top:3px">Плановый контроль качества</div></div>
+              <div class="inspectionHeadActions"><button class="primary hidden" id="newInspectionTemplateBtn">+ Чек-лист</button></div>
+            </div>
+            <div id="inspectionSummary" class="inspectionSummary"></div>
+            <div id="inspectionWorkspace"><div class="small">Загрузка обходов...</div></div>
+          </div>
+        </section>
+
         <section id="screenAlerts" class="screen">
           <div class="card">
             <div class="row between"><div><div class="sectionTitle">Уведомления</div><div class="small" style="margin-top:3px">Требуют внимания прямо сейчас</div></div><span id="alertTotalPill" class="pill gray">0</span></div>
@@ -291,6 +342,7 @@ html,body{max-width:100%;overflow-x:hidden}
 <nav id="bottomNav" class="bottomNav hidden">
   <button class="navBtn active" data-screen="dashboard"><b>⌂</b>Сводка</button>
   <button class="navBtn" data-screen="issues"><b>☰</b>Замечания</button>
+  <button class="navBtn" data-screen="inspections"><b>✓</b>Обходы</button>
   <button class="navBtn" data-screen="reports"><b>▥</b>Отчёты</button>
   <button class="navBtn" data-screen="alerts"><b>♢ <span id="alertBadge" class="badge hidden">0</span></b>Уведомления</button>
   <button class="navBtn" data-screen="zones"><b>▦</b>Объект</button>
@@ -336,6 +388,42 @@ html,body{max-width:100%;overflow-x:hidden}
   <div class="row between"><button value="cancel">Отмена</button><button class="primary" value="default">Сохранить</button></div>
 </form></dialog>
 
+
+
+<dialog id="inspectionTemplateDialog"><form method="dialog" class="dlg" id="inspectionTemplateForm">
+  <div class="dialogTitle" id="inspectionTemplateDialogTitle">Новый чек-лист</div>
+  <input type="hidden" id="inspectionTemplateId">
+  <div class="field"><label>Объект</label><select id="inspectionTemplateObject"></select></div>
+  <div class="field"><label>Название чек-листа</label><input id="inspectionTemplateName" required placeholder="Например: Ежедневный обход торгового зала"></div>
+  <div class="field"><label class="checkItem" style="display:flex"><input id="inspectionTemplateActive" type="checkbox" checked><span><b>Чек-лист активен</b><div class="small">Неактивный шаблон сохраняется в истории, но по нему нельзя начать новый обход.</div></span></label></div>
+  <div class="row between"><button value="cancel">Отмена</button><button class="primary" value="default">Сохранить</button></div>
+</form></dialog>
+
+<dialog id="inspectionItemsDialog"><div class="dlg">
+  <div class="row between"><div><div class="dialogTitle" style="margin:0">Пункты чек-листа</div><div id="inspectionItemsTemplateName" class="small" style="margin-top:4px"></div></div><button class="primary" id="addInspectionItemBtn">+ Пункт</button></div>
+  <div id="inspectionItemsManageList" class="inspectionManageList"></div>
+  <div class="row" style="margin-top:16px"><button id="closeInspectionItemsBtn">Закрыть</button></div>
+</div></dialog>
+
+<dialog id="inspectionItemDialog"><form method="dialog" class="dlg" id="inspectionItemForm">
+  <div class="dialogTitle" id="inspectionItemDialogTitle">Новый пункт</div>
+  <input type="hidden" id="inspectionItemId"><input type="hidden" id="inspectionItemTemplateId">
+  <div class="field"><label>Зона</label><select id="inspectionItemZone" required></select></div>
+  <div class="field"><label>Что проверить</label><textarea id="inspectionItemTitle" required placeholder="Например: Пол чистый, без видимых загрязнений"></textarea></div>
+  <div class="field"><label>Порядок</label><input id="inspectionItemOrder" type="number" min="0" step="1" value="0"></div>
+  <div class="field"><label class="checkItem" style="display:flex"><input id="inspectionItemPhotoRequired" type="checkbox" checked><span><b>Фото обязательно при нарушении</b><div class="small">При результате «Нарушение» сотрудник не сможет завершить обход без фотографии.</div></span></label></div>
+  <div class="field"><label class="checkItem" style="display:flex"><input id="inspectionItemActive" type="checkbox" checked><span><b>Пункт активен</b></span></label></div>
+  <div class="row between"><button value="cancel">Отмена</button><button class="primary" value="default">Сохранить</button></div>
+</form></dialog>
+
+<dialog id="inspectionFailDialog"><form method="dialog" class="dlg" id="inspectionFailForm">
+  <div class="dialogTitle">Зафиксировать нарушение</div>
+  <div id="inspectionFailTitle" class="small" style="margin-bottom:12px"></div>
+  <div class="field"><label>Комментарий — обязательно</label><textarea id="inspectionFailComment" required placeholder="Что именно не соответствует требованиям"></textarea></div>
+  <div class="field"><label id="inspectionFailPhotoLabel">Фото нарушения</label><input id="inspectionFailPhoto" type="file" accept="image/*" capture="environment"><div id="inspectionFailPhotoHint" class="small" style="margin-top:5px"></div></div>
+  <div class="row between"><button value="cancel">Отмена</button><button class="danger" value="default">Сохранить нарушение</button></div>
+</form></dialog>
+
 <dialog id="issueDialog"><form method="dialog" class="dlg" id="issueForm">
   <div class="dialogTitle">Новое замечание</div>
   <div class="field"><label>Объект</label><select id="issueObject"></select></div>
@@ -369,6 +457,7 @@ let profile=null, objects=[], zones=[], issues=[], profiles=[], objectUsers=[], 
 let adminProfiles=[], adminObjects=[], adminZones=[], adminObjectUsers=[], adminPane='users', adminZonesObjectId=null;
 let activeScreen='dashboard', statusFilter='all', searchText='', myOnly=false, autoRefreshHandle=null, deferredInstallPrompt=null;
 let analyticsData=null, analyticsLoading=false;
+let inspectionTemplates=[],inspectionTemplateItems=[],inspectionRuns=[],inspectionResults=[],inspectionPhotos=[],inspectionZones=[],selectedInspectionId=null,inspectionManageTemplateId=null,inspectionFailContext=null;
 const roleRu={director:'Директор',lead_manager:'Ведущий менеджер',regional_manager:'Региональный менеджер',object_manager:'Менеджер объекта',client_regional:'Региональное ответственное лицо',client_object:'Ответственное лицо заказчика'};
 const sideRu={cleaning:'Клининговая компания',client:'Заказчик'};
 const statusRu={new:'Новое',accepted:'Принято',in_progress:'В работе',awaiting_approval:'Ожидает подтверждения',returned:'Возвращено',closed:'Закрыто'};
@@ -407,7 +496,7 @@ async function loadAll(showErrors=true){try{const [o,z,i,p,ou]=await Promise.all
 ]);for(const x of [o,z,i,p,ou])if(x.error)throw x.error;objects=o.data||[];zones=z.data||[];issues=i.data||[];profiles=p.data||[];objectUsers=ou.data||[];if(!selectedObjectId||!objects.some(o=>o.id===selectedObjectId))selectedObjectId=objects[0]?.id||null;renderAll()}catch(e){if(showErrors)alert('Ошибка загрузки: '+errText(e))}}
 function renderAll(){renderObjectSelectors();renderDashboard();renderFilters();renderIssues();renderZones();renderAlerts()}
 function renderObjectSelectors(){const list=objects.length?objects.map(o=>`<div class="item click ${o.id===selectedObjectId?'selected':''}" data-oid="${o.id}"><b>${esc(o.name)}</b><div class="small">${esc(o.address||'')}</div></div>`).join(''):'<div class="small">Нет доступных объектов</div>';$('objects').innerHTML=list;$('objects').querySelectorAll('[data-oid]').forEach(el=>el.onclick=()=>chooseObject(el.dataset.oid));$('mobileObjectSelect').innerHTML=objects.map(o=>`<option value="${o.id}">${esc(o.name)}</option>`).join('');if(selectedObjectId)$('mobileObjectSelect').value=selectedObjectId;$('mobileObjectSelect').onchange=e=>chooseObject(e.target.value);$('selectedTitle').textContent=selectedObject()?.name||'Нет доступного объекта';$('newIssueBtn').disabled=!selectedObjectId}
-function chooseObject(id){selectedObjectId=id;selectedIssueId=null;renderAll();if(activeScreen==='dashboard')renderDashboard()}
+function chooseObject(id){selectedObjectId=id;selectedIssueId=null;selectedInspectionId=null;renderAll();if(activeScreen==='dashboard')renderDashboard();if(activeScreen==='inspections')renderInspections()}
 
 function slaSuccessPercent(arr){const closed=arr.filter(i=>i.status==='closed'&&i.closed_at);if(!closed.length)return null;const ok=closed.filter(i=>{const limit=objectSla(i.object_id).resolve*60000;return new Date(i.closed_at).getTime()-new Date(i.created_at).getTime()<=limit}).length;return Math.round(ok*100/closed.length)}
 function renderDashboard(){
@@ -783,7 +872,7 @@ async function exportReportPdf(){
 
 function openReports(){initReportFilters();switchScreen('reports')}
 
-function switchScreen(name){activeScreen=name;document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));const map={dashboard:'screenDashboard',issues:'screenIssues',reports:'screenReports',alerts:'screenAlerts',zones:'screenZones',profile:'screenProfile',admin:'screenAdmin',detail:'screenIssueDetail'};$(map[name]).classList.add('active');document.querySelectorAll('.navBtn').forEach(b=>b.classList.toggle('active',b.dataset.screen===name));if(name==='dashboard')renderDashboard();if(name==='issues')renderIssues();if(name==='reports'){initReportFilters();loadAnalytics()}if(name==='zones')renderZones();if(name==='alerts')renderAlerts();if(name==='admin')loadAdminData();window.scrollTo({top:0,behavior:'smooth'})}
+function switchScreen(name){activeScreen=name;document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));const map={dashboard:'screenDashboard',issues:'screenIssues',inspections:'screenInspections',reports:'screenReports',alerts:'screenAlerts',zones:'screenZones',profile:'screenProfile',admin:'screenAdmin',detail:'screenIssueDetail'};$(map[name]).classList.add('active');document.querySelectorAll('.navBtn').forEach(b=>b.classList.toggle('active',b.dataset.screen===name));if(name==='dashboard')renderDashboard();if(name==='issues')renderIssues();if(name==='inspections')loadInspectionData();if(name==='reports'){initReportFilters();loadAnalytics()}if(name==='zones')renderZones();if(name==='alerts')renderAlerts();if(name==='admin')loadAdminData();window.scrollTo({top:0,behavior:'smooth'})}
 document.querySelectorAll('.navBtn').forEach(b=>b.onclick=()=>switchScreen(b.dataset.screen));
 
 
@@ -885,6 +974,130 @@ function renderAdminZones(){const arr=adminZones.filter(z=>z.object_id===adminZo
 $('addZoneBtn').onclick=()=>openZoneEdit();$('closeZonesAdminBtn').onclick=()=>$('zonesAdminDialog').close();
 function openZoneEdit(id=null){const z=id?adminZones.find(x=>x.id===id):null;$('zoneEditTitle').textContent=z?'Редактирование зоны':'Новая зона';$('adminZoneId').value=z?.id||'';$('adminZoneObjectId').value=z?.object_id||adminZonesObjectId;$('adminZoneName').value=z?.name||'';$('adminZoneOrder').value=z?.sort_order??adminZones.filter(x=>x.object_id===adminZonesObjectId).length+1;$('adminZoneActive').checked=z?.is_active!==false;$('zoneEditDialog').showModal()}
 $('zoneEditForm').addEventListener('submit',async e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();try{const {error}=await supabase.rpc('director_manage_zone',{p_zone_id:$('adminZoneId').value||null,p_object_id:$('adminZoneObjectId').value,p_name:$('adminZoneName').value.trim(),p_sort_order:Number($('adminZoneOrder').value||0),p_is_active:$('adminZoneActive').checked});if(error)throw error;$('zoneEditDialog').close();await loadAll();await loadAdminData();adminZonesObjectId=$('adminZoneObjectId').value;renderAdminZones()}catch(e){alert('Ошибка: '+errText(e))}});
+
+
+// ===== v1.5 Плановые обходы и чек-листы =====
+const inspectionResultRu={pass:'Выполнено',fail:'Нарушение',na:'Не применимо'};
+function canManageInspections(){return profile?.side==='cleaning'&&['director','lead_manager','regional_manager'].includes(profile?.role)}
+function inspectionTemplateById(id){return inspectionTemplates.find(x=>x.id===id)||null}
+function inspectionRunById(id){return inspectionRuns.find(x=>Number(x.id)===Number(id))||null}
+function inspectionZoneLabel(id){return inspectionZones.find(x=>x.id===id)?.name||zoneName(id)}
+function inspectionResultFor(runId,itemId){return inspectionResults.find(x=>Number(x.inspection_id)===Number(runId)&&x.template_item_id===itemId)||null}
+function inspectionPhotosForResult(resultId){return inspectionPhotos.filter(x=>Number(x.result_id)===Number(resultId))}
+function inspectionDate(v){return v?new Date(v).toLocaleString('ru-RU'):'—'}
+function inspectionStatusLabel(s){return s==='completed'?'Завершён':'В процессе'}
+function inspectionStatusPill(s){return s==='completed'?'':'orange'}
+
+async function loadInspectionData(){
+  if(!$('inspectionWorkspace'))return;
+  try{
+    $('inspectionWorkspace').innerHTML='<div class="small">Загрузка обходов...</div>';
+    const [t,ti,r,res,ph,z]=await Promise.all([
+      supabase.from('inspection_templates').select('*').order('created_at',{ascending:false}),
+      supabase.from('inspection_template_items').select('*').order('sort_order'),
+      supabase.from('inspections').select('*').order('created_at',{ascending:false}).limit(200),
+      supabase.from('inspection_results').select('*').order('id'),
+      supabase.from('inspection_photos').select('*').order('created_at'),
+      supabase.from('object_zones').select('*').order('sort_order')
+    ]);
+    for(const x of [t,ti,r,res,ph,z])if(x.error)throw x.error;
+    inspectionTemplates=t.data||[];inspectionTemplateItems=ti.data||[];inspectionRuns=r.data||[];inspectionResults=res.data||[];inspectionPhotos=ph.data||[];inspectionZones=z.data||[];
+    if(selectedInspectionId&&!inspectionRuns.some(x=>Number(x.id)===Number(selectedInspectionId)))selectedInspectionId=null;
+    renderInspections();
+  }catch(e){$('inspectionWorkspace').innerHTML=`<div class="error">${esc(errText(e))}</div>`}
+}
+
+function renderInspections(){
+  const obj=selectedObject();
+  $('inspectionObjectHint').textContent=obj?`${obj.name} · плановый контроль качества`:'Выберите объект';
+  $('newInspectionTemplateBtn').classList.toggle('hidden',!canManageInspections()||!obj);
+  const runs=inspectionRuns.filter(x=>!selectedObjectId||x.object_id===selectedObjectId);
+  const inProgress=runs.filter(x=>x.status==='in_progress');
+  const completed=runs.filter(x=>x.status==='completed');
+  const failed=inspectionResults.filter(x=>runs.some(r=>Number(r.id)===Number(x.inspection_id))&&x.result==='fail').length;
+  const templates=inspectionTemplates.filter(x=>!selectedObjectId||x.object_id===selectedObjectId);
+  $('inspectionSummary').innerHTML=`<div class="inspectionMetric"><b>${templates.filter(x=>x.is_active).length}</b><span>Активных чек-листов</span></div><div class="inspectionMetric"><b>${inProgress.length}</b><span>Обходов в работе</span></div><div class="inspectionMetric"><b>${completed.length}</b><span>Завершено</span></div><div class="inspectionMetric"><b>${failed}</b><span>Нарушений выявлено</span></div>`;
+  if(selectedInspectionId){const run=inspectionRunById(selectedInspectionId);if(run){renderInspectionRun(run);return}else selectedInspectionId=null}
+  const visibleTemplates=templates.filter(x=>canManageInspections()||x.is_active);
+  const tplHtml=visibleTemplates.length?visibleTemplates.map(t=>{const cnt=inspectionTemplateItems.filter(i=>i.template_id===t.id&&i.is_active).length;return `<div class="inspectionTemplateCard ${t.is_active?'':'inactive'}"><div class="inspectionTemplateTop"><div><div class="inspectionTemplateName">${esc(t.name)}</div><div class="small" style="margin-top:4px">${cnt} ${cnt===1?'пункт':'пунктов'}</div></div><span class="pill ${t.is_active?'blue':'gray'}">${t.is_active?'Активен':'Отключён'}</span></div><div class="inspectionTemplateActions">${t.is_active?`<button class="primary" data-start-inspection="${t.id}" ${cnt?'':'disabled'}>Начать обход</button>`:''}${canManageInspections()?`<button class="neutral" data-items-inspection-template="${t.id}">Пункты</button><button class="ghost" data-manage-inspection-template="${t.id}">Настроить</button>`:''}</div></div>`}).join(''):'<div class="small" style="padding:12px 2px">Для выбранного объекта чек-листы ещё не созданы.</div>';
+  const history=runs.slice(0,30).map(r=>{const t=inspectionTemplateById(r.template_id);const rr=inspectionResults.filter(x=>Number(x.inspection_id)===Number(r.id)),bad=rr.filter(x=>x.result==='fail').length;return `<div class="inspectionHistoryRow" data-open-inspection="${r.id}"><div class="inspectionHistoryInfo"><div class="inspectionHistoryName">Обход №${r.id} · ${esc(t?.name||'Чек-лист')}</div><div class="small" style="margin-top:4px">${inspectionDate(r.started_at)} · ${esc(userName(r.inspector_id))}</div></div><div style="text-align:right"><span class="pill ${inspectionStatusPill(r.status)}">${inspectionStatusLabel(r.status)}</span>${bad?`<div class="small" style="margin-top:5px;color:#b23a3a">Нарушений: ${bad}</div>`:''}</div></div>`}).join('');
+  $('inspectionWorkspace').innerHTML=`<div class="row between"><div class="subTitle" style="margin:0">Чек-листы</div><span class="small">Выберите шаблон для нового обхода</span></div><div class="inspectionTemplateGrid">${tplHtml}</div><div class="subTitle" style="margin-top:22px">История обходов</div><div class="inspectionHistory">${history||'<div class="small">Обходов пока нет.</div>'}</div>`;
+  $('inspectionWorkspace').querySelectorAll('[data-start-inspection]').forEach(b=>b.onclick=()=>startInspection(b.dataset.startInspection));
+  $('inspectionWorkspace').querySelectorAll('[data-items-inspection-template]').forEach(b=>b.onclick=()=>openInspectionItemsManager(b.dataset.itemsInspectionTemplate));
+  $('inspectionWorkspace').querySelectorAll('[data-manage-inspection-template]').forEach(b=>b.onclick=()=>openInspectionTemplateDialog(b.dataset.manageInspectionTemplate));
+  $('inspectionWorkspace').querySelectorAll('[data-open-inspection]').forEach(b=>b.onclick=()=>{selectedInspectionId=Number(b.dataset.openInspection);renderInspections()});
+}
+
+async function startInspection(templateId){
+  try{
+    const current=inspectionRuns.find(x=>x.template_id===templateId&&x.status==='in_progress'&&x.inspector_id===profile.id);
+    if(current&&!confirm(`У вас уже есть незавершённый обход №${current.id} по этому чек-листу. Начать ещё один?`)) {selectedInspectionId=Number(current.id);renderInspections();return}
+    const {data,error}=await supabase.rpc('start_inspection',{p_template_id:templateId});if(error)throw error;selectedInspectionId=Number(data);await loadInspectionData();
+  }catch(e){alert('Ошибка: '+errText(e))}
+}
+
+function renderInspectionRun(run){
+  const t=inspectionTemplateById(run.template_id),items=inspectionTemplateItems.filter(x=>x.template_id===run.template_id&&(x.is_active||inspectionResultFor(run.id,x.id))).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+  const mine=run.inspector_id===profile.id,editable=run.status==='in_progress'&&mine;
+  const done=items.filter(i=>inspectionResultFor(run.id,i.id)).length,pct=items.length?Math.round(done*100/items.length):0;
+  const bad=items.filter(i=>inspectionResultFor(run.id,i.id)?.result==='fail').length;
+  const cards=items.map(item=>{const rr=inspectionResultFor(run.id,item.id),kind=rr?.result||'',photos=rr?inspectionPhotosForResult(rr.id):[];return `<div class="inspectionItem ${kind}"><div class="inspectionItemTop"><div><div class="inspectionItemTitle">${esc(item.title)}</div><div class="small" style="margin-top:4px">Зона: ${esc(inspectionZoneLabel(item.zone_id))}</div></div>${rr?`<span class="pill ${kind==='fail'?'red':kind==='pass'?'blue':'gray'}">${inspectionResultRu[kind]}</span>`:'<span class="pill gray">Не заполнено</span>'}</div>${editable?`<div class="inspectionChoice"><button class="${kind==='pass'?'selected':''}" data-inspection-choice="pass" data-item="${item.id}">✓ Выполнено</button><button class="${kind==='fail'?'selected':''}" data-inspection-choice="fail" data-item="${item.id}">! Нарушение</button><button class="${kind==='na'?'selected':''}" data-inspection-choice="na" data-item="${item.id}">— Не применимо</button></div>`:''}${rr?.comment?`<div class="inspectionResultNote">${esc(rr.comment)}</div>`:''}${rr&&photos.length?`<div><img class="inspectionPhotoThumb" id="inspectionPhoto_${rr.id}" alt="Фото нарушения"></div>`:''}${rr?.issue_id?`<div style="margin-top:8px"><button class="ghost inspectionIssueLink" data-inspection-issue="${rr.issue_id}">Замечание №${rr.issue_id}</button></div>`:''}</div>`}).join('');
+  $('inspectionWorkspace').innerHTML=`<div class="inspectionRunHead"><div><div class="sectionTitle">Обход №${run.id}</div><div class="small" style="margin-top:4px">${esc(t?.name||'Чек-лист')} · ${inspectionDate(run.started_at)}</div><div class="small" style="margin-top:3px">Проверяющий: ${esc(userName(run.inspector_id))}</div></div><span class="pill ${inspectionStatusPill(run.status)}">${inspectionStatusLabel(run.status)}</span></div><div class="inspectionProgressWrap"><div class="inspectionProgressTop"><b>Заполнено ${done} из ${items.length}</b><span class="small">${pct}%${bad?` · нарушений ${bad}`:''}</span></div><div class="inspectionProgressBar"><div class="inspectionProgressFill" style="width:${pct}%"></div></div></div>${!mine&&run.status==='in_progress'?'<div class="note">Этот обход выполняет другой пользователь. Результаты доступны только для просмотра.</div>':''}<div class="inspectionItems">${cards||'<div class="small">В чек-листе нет активных пунктов.</div>'}</div><div class="inspectionRunFooter"><button class="neutral" id="inspectionBackBtn">← К списку обходов</button>${editable?`<button class="primary" id="completeInspectionBtn" ${done===items.length&&items.length?'':'disabled'}>Завершить обход</button>`:''}</div>`;
+  $('inspectionBackBtn').onclick=()=>{selectedInspectionId=null;renderInspections()};
+  $('inspectionWorkspace').querySelectorAll('[data-inspection-choice]').forEach(b=>b.onclick=()=>{const itemId=b.dataset.item,choice=b.dataset.inspectionChoice;if(choice==='fail')openInspectionFailDialog(run,itemId);else saveInspectionQuick(run,itemId,choice)});
+  $('inspectionWorkspace').querySelectorAll('[data-inspection-issue]').forEach(b=>b.onclick=()=>openIssue(Number(b.dataset.inspectionIssue)));
+  if($('completeInspectionBtn'))$('completeInspectionBtn').onclick=()=>completeInspection(run);
+  hydrateInspectionThumbs(run.id);
+}
+
+async function hydrateInspectionThumbs(runId){
+  const results=inspectionResults.filter(x=>Number(x.inspection_id)===Number(runId));
+  for(const rr of results){const photo=inspectionPhotosForResult(rr.id)[0],img=$(`inspectionPhoto_${rr.id}`);if(!photo||!img)continue;try{const {data,error}=await supabase.storage.from('inspection-photos').createSignedUrl(photo.storage_path,3600);if(!error&&data?.signedUrl)img.src=data.signedUrl}catch{}}
+}
+
+async function saveInspectionQuick(run,itemId,result){
+  try{const {error}=await supabase.rpc('save_inspection_result',{p_inspection_id:Number(run.id),p_template_item_id:itemId,p_result:result,p_comment:null});if(error)throw error;await loadInspectionData()}catch(e){alert('Ошибка: '+errText(e))}
+}
+
+function openInspectionFailDialog(run,itemId){
+  const item=inspectionTemplateItems.find(x=>x.id===itemId);inspectionFailContext={runId:Number(run.id),itemId,required:item?.requires_photo_on_fail!==false,objectId:run.object_id};
+  $('inspectionFailTitle').textContent=`${inspectionZoneLabel(item?.zone_id)} · ${item?.title||''}`;$('inspectionFailComment').value=inspectionResultFor(run.id,itemId)?.comment||'';$('inspectionFailPhoto').value='';$('inspectionFailPhotoLabel').textContent=inspectionFailContext.required?'Фото нарушения — обязательно':'Фото нарушения — необязательно';$('inspectionFailPhotoHint').textContent=inspectionFailContext.required?'Без фотографии завершить обход нельзя.':'Фотографию можно добавить для подтверждения нарушения.';$('inspectionFailDialog').showModal();
+}
+
+async function uploadInspectionPhoto(resultId,file,ctx){
+  const ext=(file.name?.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';const path=`${ctx.objectId}/${ctx.runId}/${resultId}/${Date.now()}_fail.${ext}`;
+  const up=await supabase.storage.from('inspection-photos').upload(path,file,{upsert:false,contentType:file.type||undefined});if(up.error)throw up.error;
+  const ins=await supabase.from('inspection_photos').insert({result_id:resultId,uploaded_by:profile.id,storage_path:path});if(ins.error)throw ins.error;return path;
+}
+$('inspectionFailForm').addEventListener('submit',async e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();const ctx=inspectionFailContext;if(!ctx)return;const comment=$('inspectionFailComment').value.trim(),file=$('inspectionFailPhoto').files[0];try{if(!comment)throw new Error('Укажите комментарий к нарушению');if(ctx.required&&!file)throw new Error('Добавьте фото нарушения');const {data,error}=await supabase.rpc('save_inspection_result',{p_inspection_id:ctx.runId,p_template_item_id:ctx.itemId,p_result:'fail',p_comment:comment});if(error)throw error;if(file)await uploadInspectionPhoto(Number(data),file,ctx);$('inspectionFailDialog').close();inspectionFailContext=null;await loadInspectionData()}catch(e){alert('Ошибка: '+errText(e))}});
+
+async function syncInspectionPhotosToIssues(runId){
+  const run=inspectionRunById(runId);if(!run)return 0;
+  const fails=inspectionResults.filter(x=>Number(x.inspection_id)===Number(runId)&&x.result==='fail'&&x.issue_id);if(!fails.length)return 0;
+  const issueIds=fails.map(x=>Number(x.issue_id));const {data:existing}=await supabase.from('issue_photos').select('issue_id,photo_type').in('issue_id',issueIds);
+  let copied=0;
+  for(const rr of fails){if((existing||[]).some(x=>Number(x.issue_id)===Number(rr.issue_id)&&x.photo_type==='before'))continue;const ph=inspectionPhotosForResult(rr.id)[0];if(!ph)continue;try{const {data:blob,error}=await supabase.storage.from('inspection-photos').download(ph.storage_path);if(error)throw error;const ext=(ph.storage_path.split('.').pop()||'jpg').replace(/[^a-z0-9]/gi,'')||'jpg';const file=new File([blob],`inspection_before.${ext}`,{type:blob.type||'image/jpeg'});await uploadPhoto(run.object_id,Number(rr.issue_id),'before',file);copied++}catch(e){console.warn('Не удалось скопировать фото обхода в замечание',e)}}
+  return copied;
+}
+
+async function completeInspection(run){
+  if(!confirm('Завершить обход? По каждому нарушению будет автоматически создано замечание.'))return;
+  const btn=$('completeInspectionBtn');if(btn)btn.disabled=true;
+  try{const {data,error}=await supabase.rpc('complete_inspection',{p_inspection_id:Number(run.id)});if(error)throw error;await loadInspectionData();const copied=await syncInspectionPhotosToIssues(Number(run.id));await loadAll();await loadInspectionData();alert(`Обход завершён. Создано замечаний: ${Number(data||0)}${Number(data||0)?`. Фото перенесено в замечания: ${copied}`:''}.`)}catch(e){alert('Ошибка: '+errText(e));if(btn)btn.disabled=false}
+}
+
+$('newInspectionTemplateBtn').onclick=()=>openInspectionTemplateDialog();
+function openInspectionTemplateDialog(id=null){
+  if(!canManageInspections())return;const t=id?inspectionTemplateById(id):null;
+  $('inspectionTemplateDialogTitle').textContent=t?'Настройка чек-листа':'Новый чек-лист';$('inspectionTemplateId').value=t?.id||'';$('inspectionTemplateObject').innerHTML=objects.map(o=>`<option value="${o.id}">${esc(o.name)}</option>`).join('');$('inspectionTemplateObject').value=t?.object_id||selectedObjectId||objects[0]?.id||'';$('inspectionTemplateName').value=t?.name||'';$('inspectionTemplateActive').checked=t?.is_active!==false;$('inspectionTemplateDialog').showModal();
+}
+$('inspectionTemplateForm').addEventListener('submit',async e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();try{const id=$('inspectionTemplateId').value||null;const {data,error}=await supabase.rpc('manage_inspection_template',{p_template_id:id,p_object_id:$('inspectionTemplateObject').value,p_name:$('inspectionTemplateName').value.trim(),p_is_active:$('inspectionTemplateActive').checked});if(error)throw error;$('inspectionTemplateDialog').close();await loadInspectionData();openInspectionItemsManager(data||id)}catch(e){alert('Ошибка: '+errText(e))}});
+
+function openInspectionItemsManager(templateId){inspectionManageTemplateId=templateId;const t=inspectionTemplateById(templateId);$('inspectionItemsTemplateName').textContent=t?.name||'';renderInspectionItemsManager();$('inspectionItemsDialog').showModal()}
+function renderInspectionItemsManager(){const arr=inspectionTemplateItems.filter(x=>x.template_id===inspectionManageTemplateId).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));$('inspectionItemsManageList').innerHTML=arr.map(i=>`<div class="inspectionManageRow"><div><b>${esc(i.title)}</b><div class="small" style="margin-top:3px">${esc(inspectionZoneLabel(i.zone_id))} · порядок ${i.sort_order||0} · ${i.requires_photo_on_fail?'фото при нарушении':''} ${i.is_active?'':'· отключён'}</div></div><button class="ghost" data-edit-inspection-item="${i.id}">Изменить</button></div>`).join('')||'<div class="small">Добавьте первый пункт проверки.</div>';$('inspectionItemsManageList').querySelectorAll('[data-edit-inspection-item]').forEach(b=>b.onclick=()=>openInspectionItemDialog(b.dataset.editInspectionItem))}
+$('addInspectionItemBtn').onclick=()=>openInspectionItemDialog();$('closeInspectionItemsBtn').onclick=()=>$('inspectionItemsDialog').close();
+function openInspectionItemDialog(id=null){const item=id?inspectionTemplateItems.find(x=>x.id===id):null,t=inspectionTemplateById(item?.template_id||inspectionManageTemplateId);if(!t)return;const zs=inspectionZones.filter(z=>z.object_id===t.object_id);$('inspectionItemDialogTitle').textContent=item?'Редактирование пункта':'Новый пункт';$('inspectionItemId').value=item?.id||'';$('inspectionItemTemplateId').value=t.id;$('inspectionItemZone').innerHTML=zs.map(z=>`<option value="${z.id}">${esc(z.name)}${z.is_active?'':' (отключена)'}</option>`).join('');$('inspectionItemZone').value=item?.zone_id||zs.find(z=>z.is_active)?.id||zs[0]?.id||'';$('inspectionItemTitle').value=item?.title||'';$('inspectionItemOrder').value=item?.sort_order??inspectionTemplateItems.filter(x=>x.template_id===t.id).length+1;$('inspectionItemPhotoRequired').checked=item?.requires_photo_on_fail!==false;$('inspectionItemActive').checked=item?.is_active!==false;$('inspectionItemDialog').showModal()}
+$('inspectionItemForm').addEventListener('submit',async e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();try{const {error}=await supabase.rpc('manage_inspection_template_item',{p_item_id:$('inspectionItemId').value||null,p_template_id:$('inspectionItemTemplateId').value,p_zone_id:$('inspectionItemZone').value,p_title:$('inspectionItemTitle').value.trim(),p_sort_order:Number($('inspectionItemOrder').value||0),p_requires_photo_on_fail:$('inspectionItemPhotoRequired').checked,p_is_active:$('inspectionItemActive').checked});if(error)throw error;$('inspectionItemDialog').close();await loadInspectionData();inspectionManageTemplateId=$('inspectionItemTemplateId').value;renderInspectionItemsManager()}catch(e){alert('Ошибка: '+errText(e))}});
 
 function base64UrlToUint8Array(value){const pad='='.repeat((4-value.length%4)%4);const b64=(value+pad).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(b64);return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)))}
 async function initPushUi(){
