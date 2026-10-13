@@ -1,4 +1,4 @@
-const CACHE='sodeystvie-v1.4.4-shell';
+const CACHE='sodeystvie-v1.4.5-shell';
 const SHELL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).catch(()=>{}));
