@@ -530,7 +530,7 @@ async function loadAnalytics(showError=true){
   }finally{analyticsLoading=false}
 }
 
-// ===== v1.4.1 Report export: Excel + PDF =====
+// ===== v1.4.2 Report export: Excel + PDF + photo report =====
 function reportExportContext(){
   const a=analyticsData||{},p=a.period||{};
   const select=$('reportObjectSelect');
@@ -572,25 +572,144 @@ function reportSummaryRows(){
     ['Полный цикл до закрытия',reportMinutes(s.avg_close_minutes)]
   ]
 }
+function reportDateTime(v){
+  if(!v)return '—';
+  const d=new Date(v);if(Number.isNaN(d.getTime()))return '—';
+  return d.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+function reportNextDay(dateString){
+  const d=new Date(`${dateString}T00:00:00`);d.setDate(d.getDate()+1);return dateInputValue(d);
+}
+async function reportSelectInChunks(table,columns,column,values){
+  const unique=[...new Set((values||[]).filter(v=>v!==null&&v!==undefined&&v!==''))];if(!unique.length)return [];
+  const out=[];
+  for(let i=0;i<unique.length;i+=100){
+    const {data,error}=await supabase.from(table).select(columns).in(column,unique.slice(i,i+100));
+    if(error)throw error;out.push(...(data||[]));
+  }
+  return out;
+}
+async function loadReportIssueDetails(){
+  const from=$('reportFrom').value,to=$('reportTo').value,oid=$('reportObjectSelect').value||null;
+  if(!from||!to)throw new Error('Укажите период отчёта');
+  let q=supabase.from('issues').select('id,object_id,zone_id,category,description,status,author_id,responsible_id,created_at,accepted_at,resolved_at,closed_at').gte('created_at',`${from}T00:00:00`).lt('created_at',`${reportNextDay(to)}T00:00:00`).order('created_at',{ascending:true});
+  if(oid)q=q.eq('object_id',oid);
+  const {data,error}=await q;if(error)throw error;
+  const list=data||[];if(!list.length)return [];
+  const [zoneRows,photoRows]=await Promise.all([
+    reportSelectInChunks('object_zones','id,object_id,name','id',list.map(x=>x.zone_id)),
+    reportSelectInChunks('issue_photos','issue_id,photo_type,storage_path,created_at','issue_id',list.map(x=>x.id))
+  ]);
+  const zmap=new Map(zoneRows.map(z=>[String(z.id),z.name]));
+  const pmap=new Map();
+  for(const p of photoRows.sort((a,b)=>new Date(a.created_at)-new Date(b.created_at))){const key=String(p.issue_id);if(!pmap.has(key))pmap.set(key,[]);pmap.get(key).push(p)}
+  return list.map(i=>{
+    const pp=pmap.get(String(i.id))||[],before=pp.find(p=>p.photo_type==='before')||null;
+    const isFixed=['awaiting_approval','closed'].includes(i.status)&&!!i.resolved_at;
+    const afterCandidates=pp.filter(p=>p.photo_type==='after');
+    const after=isFixed&&afterCandidates.length?afterCandidates[afterCandidates.length-1]:null;
+    return {
+      ...i,
+      object_name:objectName(i.object_id),
+      zone_name:zmap.get(String(i.zone_id))||zoneName(i.zone_id)||'—',
+      responsible_name:userName(i.responsible_id),
+      correction_at:isFixed?i.resolved_at:null,
+      before_path:before?.storage_path||null,
+      after_path:after?.storage_path||null
+    }
+  })
+}
+function blobToDataUrl(blob){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(r.error||new Error('Не удалось прочитать изображение'));r.readAsDataURL(blob)})}
+async function compressReportImage(blob){
+  const fallback=async()=>{
+    const type=(blob.type||'').toLowerCase();
+    if(type.includes('jpeg')||type.includes('jpg'))return {dataUrl:await blobToDataUrl(blob),extension:'jpeg'};
+    if(type.includes('png'))return {dataUrl:await blobToDataUrl(blob),extension:'png'};
+    return null;
+  };
+  let url='';
+  try{
+    url=URL.createObjectURL(blob);
+    const img=await new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(new Error('Формат фото не поддерживается браузером'));im.src=url});
+    const max=1100,scale=Math.min(1,max/Math.max(img.naturalWidth||img.width,img.naturalHeight||img.height));
+    const w=Math.max(1,Math.round((img.naturalWidth||img.width)*scale)),h=Math.max(1,Math.round((img.naturalHeight||img.height)*scale));
+    const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);
+    return {dataUrl:canvas.toDataURL('image/jpeg',0.82),extension:'jpeg',width:w,height:h};
+  }catch(e){return await fallback()}finally{if(url)URL.revokeObjectURL(url)}
+}
+const reportPhotoCache=new Map();
+async function reportPhotoAsset(path){
+  if(!path)return null;if(reportPhotoCache.has(path))return reportPhotoCache.get(path);
+  try{const {data,error}=await supabase.storage.from('issue-photos').download(path);if(error)throw error;const asset=await compressReportImage(data);reportPhotoCache.set(path,asset);return asset}catch(e){reportPhotoCache.set(path,null);return null}
+}
+async function reportPhotoAssets(details,onProgress){
+  const paths=[...new Set(details.flatMap(d=>[d.before_path,d.after_path]).filter(Boolean))],out=new Map();let done=0;
+  const queue=[...paths];
+  const worker=async()=>{while(queue.length){const path=queue.shift();const asset=await reportPhotoAsset(path);out.set(path,asset);done++;if(onProgress)onProgress(done,paths.length)}};
+  await Promise.all(Array.from({length:Math.min(4,Math.max(1,paths.length))},()=>worker()));return out;
+}
+function excelStyleSheet(ws,headerRow=1){
+  ws.views=[{state:'frozen',ySplit:headerRow}];
+  const row=ws.getRow(headerRow);row.font={bold:true,color:{argb:'FF17365F'}};row.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFEEF4F8'}};row.alignment={vertical:'middle',wrapText:true};row.height=24;
+  ws.eachRow({includeEmpty:true},r=>{r.alignment={...r.alignment,vertical:'top',wrapText:true};r.eachCell(c=>{c.border={bottom:{style:'hair',color:{argb:'FFD9E2EC'}}}})});
+  ws.autoFilter={from:{row:headerRow,column:1},to:{row:headerRow,column:ws.columnCount}};
+}
+function excelAddSimpleSheet(wb,name,rows,widths,headerRow=1){
+  const ws=wb.addWorksheet(name);rows.forEach(r=>ws.addRow(r));ws.columns=(widths||[]).map(w=>({width:w}));excelStyleSheet(ws,headerRow);return ws;
+}
 async function exportReportExcel(){
   if(!analyticsData){alert('Сначала сформируйте отчет кнопкой «Показать».');return}
   const btn=$('reportExcelBtn'),old=btn.textContent;btn.disabled=true;btn.textContent='Готовим…';
   try{
-    await loadExternalScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',()=>!!window.XLSX);
-    const {a}=reportExportContext(),wb=XLSX.utils.book_new();
-    const add=(name,rows,widths)=>{const ws=XLSX.utils.aoa_to_sheet(rows);if(widths)ws['!cols']=widths.map(w=>({wch:w}));XLSX.utils.book_append_sheet(wb,ws,name)};
-    add('Сводка',reportSummaryRows(),[34,34]);
-    add('Объекты', [['Объект','Всего','Открыто','Закрыто','Возвраты','Просрочено','SLA, %'],...(a.by_object||[]).map(x=>[x.object_name,Number(x.total||0),Number(x.open||0),Number(x.closed||0),Number(x.returned||0),Number(x.overdue||0),x.sla_percent??''])],[38,12,12,12,12,14,12]);
-    add('Зоны', [['Объект','Зона','Всего','Открыто','Закрыто','Возвраты','Просрочено'],...(a.by_zone||[]).map(x=>[x.object_name,x.zone_name,Number(x.total||0),Number(x.open||0),Number(x.closed||0),Number(x.returned||0),Number(x.overdue||0)])],[32,32,10,10,10,12,14]);
-    add('Ответственные', [['Ответственный','Всего','Открыто','Закрыто','Возвраты','Просрочено','Ср. принятие, мин','Ср. устранение, мин'],...(a.by_manager||[]).map(x=>[x.responsible_name||'Не назначен',Number(x.total||0),Number(x.open||0),Number(x.closed||0),Number(x.returned||0),Number(x.overdue||0),x.avg_accept_minutes??'',x.avg_resolve_minutes??''])],[32,10,10,10,12,14,20,22]);
-    add('Категории', [['Категория','Всего','Открыто','Просрочено'],...(a.by_category||[]).map(x=>[x.category||'Без категории',Number(x.total||0),Number(x.open||0),Number(x.overdue||0)])],[36,12,12,14]);
-    add('Статусы', [['Статус','Количество'],...(a.by_status||[]).map(x=>[reportStatusLabel(x.status),Number(x.total||0)])],[28,14]);
-    const out=XLSX.write(wb,{bookType:'xlsx',type:'array'});saveBlob(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),reportFileName('xlsx'));
+    await loadExternalScript('https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js',()=>!!window.ExcelJS);
+    const details=await loadReportIssueDetails();
+    const assets=await reportPhotoAssets(details,(n,total)=>{btn.textContent=total?`Фото ${n}/${total}`:'Готовим…'});
+    const {a}=reportExportContext(),wb=new ExcelJS.Workbook();wb.creator='УК «Содействие»';wb.created=new Date();
+    const summary=wb.addWorksheet('Сводка');reportSummaryRows().forEach(r=>summary.addRow(r));summary.columns=[{width:34},{width:34}];summary.getRow(1).font={bold:true,size:14,color:{argb:'FF17365F'}};summary.getRow(5).font={bold:true,color:{argb:'FF17365F'}};summary.getRow(5).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFEEF4F8'}};summary.eachRow(r=>{r.alignment={vertical:'top',wrapText:true}});
+    excelAddSimpleSheet(wb,'Объекты',[['Объект','Всего','Открыто','Закрыто','Возвраты','Просрочено','SLA, %'],...(a.by_object||[]).map(x=>[x.object_name,Number(x.total||0),Number(x.open||0),Number(x.closed||0),Number(x.returned||0),Number(x.overdue||0),x.sla_percent??''])],[38,12,12,12,12,14,12]);
+    excelAddSimpleSheet(wb,'Зоны',[['Объект','Зона','Всего','Открыто','Закрыто','Возвраты','Просрочено'],...(a.by_zone||[]).map(x=>[x.object_name,x.zone_name,Number(x.total||0),Number(x.open||0),Number(x.closed||0),Number(x.returned||0),Number(x.overdue||0)])],[32,32,10,10,10,12,14]);
+    excelAddSimpleSheet(wb,'Ответственные',[['Ответственный','Всего','Открыто','Закрыто','Возвраты','Просрочено','Ср. принятие, мин','Ср. устранение, мин'],...(a.by_manager||[]).map(x=>[x.responsible_name||'Не назначен',Number(x.total||0),Number(x.open||0),Number(x.closed||0),Number(x.returned||0),Number(x.overdue||0),x.avg_accept_minutes??'',x.avg_resolve_minutes??''])],[32,10,10,10,12,14,20,22]);
+    excelAddSimpleSheet(wb,'Категории',[['Категория','Всего','Открыто','Просрочено'],...(a.by_category||[]).map(x=>[x.category||'Без категории',Number(x.total||0),Number(x.open||0),Number(x.overdue||0)])],[36,12,12,14]);
+    excelAddSimpleSheet(wb,'Статусы',[['Статус','Количество'],...(a.by_status||[]).map(x=>[reportStatusLabel(x.status),Number(x.total||0)])],[28,14]);
+
+    const ws=wb.addWorksheet('Фотоотчёт');
+    ws.columns=[
+      {header:'№',key:'id',width:8},{header:'Объект',key:'object',width:28},{header:'Зона',key:'zone',width:25},{header:'Категория',key:'category',width:22},{header:'Описание',key:'description',width:42},
+      {header:'Дата и время замечания',key:'created',width:22},{header:'Фото замечания',key:'before',width:27},{header:'Дата и время исправления',key:'fixed',width:22},{header:'Фото исправленного замечания',key:'after',width:27},{header:'Статус',key:'status',width:21},{header:'Ответственный',key:'responsible',width:28}
+    ];
+    excelStyleSheet(ws,1);ws.autoFilter='A1:K1';
+    for(const d of details){
+      const row=ws.addRow({id:d.id,object:d.object_name,zone:d.zone_name,category:d.category,description:d.description,created:reportDateTime(d.created_at),before:d.before_path?'':'Нет фото',fixed:d.correction_at?reportDateTime(d.correction_at):'Не устранено',after:d.after_path?'':'Нет фото',status:reportStatusLabel(d.status),responsible:d.responsible_name||'—'});row.height=96;
+      const before=d.before_path?assets.get(d.before_path):null,after=d.after_path?assets.get(d.after_path):null;
+      if(d.before_path&&!before)row.getCell(7).value='Фото недоступно';
+      if(d.after_path&&!after)row.getCell(9).value='Фото недоступно';
+      if(before){const id=wb.addImage({base64:before.dataUrl,extension:before.extension});ws.addImage(id,{tl:{col:6.12,row:row.number-0.90},ext:{width:155,height:112}})}
+      if(after){const id=wb.addImage({base64:after.dataUrl,extension:after.extension});ws.addImage(id,{tl:{col:8.12,row:row.number-0.90},ext:{width:155,height:112}})}
+    }
+    if(!details.length)ws.addRow(['За выбранный период замечаний нет']);
+    btn.textContent='Сохраняем…';const out=await wb.xlsx.writeBuffer();saveBlob(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),reportFileName('xlsx'));
   }catch(e){alert('Не удалось выгрузить Excel: '+errText(e)+'\nПроверьте подключение к интернету и попробуйте снова.')}finally{btn.disabled=false;btn.textContent=old}
 }
 function pdfTable(title,headers,rows,widths){
   if(!rows.length)return [{text:title,style:'sectionTitle',margin:[0,10,0,5]},{text:'Нет данных',color:'#6b7c90',fontSize:9}];
   return [{text:title,style:'sectionTitle',margin:[0,10,0,5]},{table:{headerRows:1,widths:widths||headers.map(()=>'*'),body:[headers.map(x=>({text:x,style:'tableHeader'})),...rows.map(r=>r.map(x=>String(x??'—')))]},layout:'lightHorizontalLines',fontSize:8}]
+}
+function pdfPhotoBlock(d,assets,first){
+  const before=d.before_path?assets.get(d.before_path):null,after=d.after_path?assets.get(d.after_path):null;
+  const imgBox=(title,asset,empty)=>[
+    {text:title,bold:true,fontSize:9,color:'#17365f',margin:[0,0,0,5]},
+    asset?{image:asset.dataUrl,fit:[330,235],alignment:'center'}:{text:empty,alignment:'center',color:'#8793a3',margin:[0,65,0,65]}
+  ];
+  return [
+    {text:`Замечание №${d.id}`,style:'sectionTitle',pageBreak:first?undefined:'before',margin:[0,0,0,6]},
+    {table:{widths:[95,'*',95,'*'],body:[
+      [{text:'Объект',bold:true},d.object_name,{text:'Зона',bold:true},d.zone_name],
+      [{text:'Категория',bold:true},d.category,{text:'Статус',bold:true},reportStatusLabel(d.status)],
+      [{text:'Дата замечания',bold:true},reportDateTime(d.created_at),{text:'Дата исправления',bold:true},d.correction_at?reportDateTime(d.correction_at):'Не устранено'],
+      [{text:'Ответственный',bold:true},d.responsible_name||'—',{text:'Описание',bold:true},d.description||'—']
+    ]},layout:'lightHorizontalLines',fontSize:8,margin:[0,0,0,10]},
+    {columns:[{width:'*',stack:imgBox('Фото замечания',before,d.before_path?'Фото недоступно':'Фото не приложено')},{width:'*',stack:imgBox('Фото исправленного замечания',after,d.after_path?'Фото недоступно':'Замечание ещё не устранено')}],columnGap:12}
+  ]
 }
 async function exportReportPdf(){
   if(!analyticsData){alert('Сначала сформируйте отчет кнопкой «Показать».');return}
@@ -598,6 +717,7 @@ async function exportReportPdf(){
   try{
     await loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/pdfmake.min.js',()=>!!window.pdfMake);
     await loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/vfs_fonts.js',()=>!!window.pdfMake?.vfs);
+    const details=await loadReportIssueDetails();const assets=await reportPhotoAssets(details,(n,total)=>{btn.textContent=total?`Фото ${n}/${total}`:'Готовим…'});
     const {a,p,objectLabel}=reportExportContext(),s=a.summary||{};
     const content=[
       {text:'Управляющая Компания «Содействие»',style:'company'},
@@ -615,8 +735,9 @@ async function exportReportPdf(){
       ...pdfTable('Ответственные',['Ответственный','Всего','Откр.','Закр.','Проср.','Ср. принятие'],(a.by_manager||[]).map(x=>[x.responsible_name||'Не назначен',x.total,x.open,x.closed,x.overdue,reportMinutes(x.avg_accept_minutes)]),['*',32,32,32,38,55]),
       ...pdfTable('Категории',['Категория','Всего','Открыто','Просрочено'],(a.by_category||[]).map(x=>[x.category||'Без категории',x.total,x.open,x.overdue]),['*',42,42,50])
     ];
+    if(details.length){content.push({text:'Фотоотчёт',style:'title',pageBreak:'before',margin:[0,0,0,10]});details.forEach((d,i)=>content.push(...pdfPhotoBlock(d,assets,i===0)))}
     const doc={pageSize:'A4',pageOrientation:'landscape',pageMargins:[28,28,28,32],content,defaultStyle:{font:'Roboto',fontSize:9,color:'#25374d'},styles:{company:{fontSize:10,bold:true,color:'#1a7f6b'},title:{fontSize:17,bold:true,color:'#17365f',margin:[0,3,0,8]},meta:{fontSize:9,color:'#607086',margin:[0,0,0,3]},sectionTitle:{fontSize:11,bold:true,color:'#17365f'},tableHeader:{bold:true,fillColor:'#eef4f8',color:'#17365f'},kpi:{alignment:'center',bold:true,fontSize:10,margin:[3,6,3,6]},timeBox:{alignment:'center',fillColor:'#f5f8fb',margin:[5,7,5,7],fontSize:9}},footer:(current,count)=>({text:`Страница ${current} из ${count}`,alignment:'center',fontSize:8,color:'#8793a3',margin:[0,8,0,0]})};
-    const blob=await new Promise((resolve,reject)=>{try{pdfMake.createPdf(doc).getBlob(resolve)}catch(e){reject(e)}});saveBlob(blob,reportFileName('pdf'));
+    btn.textContent='Сохраняем…';const blob=await new Promise((resolve,reject)=>{try{pdfMake.createPdf(doc).getBlob(resolve)}catch(e){reject(e)}});saveBlob(blob,reportFileName('pdf'));
   }catch(e){alert('Не удалось выгрузить PDF: '+errText(e)+'\nПроверьте подключение к интернету и попробуйте снова.')}finally{btn.disabled=false;btn.textContent=old}
 }
 
