@@ -694,29 +694,56 @@ function pdfTable(title,headers,rows,widths){
   if(!rows.length)return [{text:title,style:'sectionTitle',margin:[0,10,0,5]},{text:'Нет данных',color:'#6b7c90',fontSize:9}];
   return [{text:title,style:'sectionTitle',margin:[0,10,0,5]},{table:{headerRows:1,widths:widths||headers.map(()=>'*'),body:[headers.map(x=>({text:x,style:'tableHeader'})),...rows.map(r=>r.map(x=>String(x??'—')))]},layout:'lightHorizontalLines',fontSize:8}]
 }
-function pdfPhotoBlock(d,assets){
+function pdfPhotoCard(d,assets){
   const before=d.before_path?assets.get(d.before_path):null,after=d.after_path?assets.get(d.after_path):null;
-  const imgBox=(title,asset,empty)=>[
-    {text:title,bold:true,fontSize:7.5,color:'#17365f',margin:[0,0,0,3]},
-    asset?{image:asset.dataUrl,fit:[238,140],alignment:'center'}:{text:empty,alignment:'center',color:'#8793a3',fontSize:7,margin:[0,52,0,52]}
-  ];
-  return [{
-    unbreakable:true,
-    margin:[0,0,0,9],
+  const short=(v,n=78)=>{v=String(v||'—').replace(/\s+/g,' ').trim();return v.length>n?v.slice(0,n-1)+'…':v};
+  const photo=(asset,empty)=>asset
+    ?{image:asset.dataUrl,fit:[112,72],alignment:'center',margin:[0,2,0,2]}
+    :{text:empty,alignment:'center',color:'#8793a3',fontSize:6,margin:[0,30,0,30]};
+  return {
+    margin:[2,2,2,2],
     stack:[
-      {text:`Замечание №${d.id}`,fontSize:9,bold:true,color:'#17365f',margin:[0,0,0,3]},
-      {table:{widths:[58,'*',64,'*'],body:[
-        [{text:'Объект',bold:true},d.object_name,{text:'Зона',bold:true},d.zone_name],
-        [{text:'Категория',bold:true},d.category,{text:'Статус',bold:true},reportStatusLabel(d.status)],
-        [{text:'Дата/время',bold:true},reportDateTime(d.created_at),{text:'Исправлено',bold:true},d.correction_at?reportDateTime(d.correction_at):'Не устранено'],
-        [{text:'Ответственный',bold:true},d.responsible_name||'—',{text:'Описание',bold:true},d.description||'—']
-      ]},layout:'lightHorizontalLines',fontSize:7,margin:[0,0,0,5]},
       {columns:[
-        {width:'*',stack:imgBox('Фото замечания',before,d.before_path?'Фото недоступно':'Фото не приложено')},
-        {width:'*',stack:imgBox('Фото исправленного замечания',after,d.after_path?'Фото недоступно':'Ещё не устранено')}
-      ],columnGap:8}
+        {text:`№${d.id}`,bold:true,fontSize:7.5,color:'#17365f'},
+        {text:reportStatusLabel(d.status),alignment:'right',fontSize:6.2,color:'#607086'}
+      ],margin:[0,0,0,2]},
+      {text:`${short(d.object_name,34)} · ${short(d.zone_name,30)}`,fontSize:6.3,bold:true,margin:[0,0,0,2]},
+      {text:short(d.description,92),fontSize:6,color:'#41556d',margin:[0,0,0,3]},
+      {table:{widths:['*','*'],body:[
+        [
+          {stack:[{text:'ДО',bold:true,fontSize:6.2,color:'#17365f',alignment:'center'},photo(before,d.before_path?'Фото недоступно':'Нет фото')]},
+          {stack:[{text:'ПОСЛЕ',bold:true,fontSize:6.2,color:'#17365f',alignment:'center'},photo(after,d.after_path?'Фото недоступно':'Не устранено')]}
+        ]
+      ]},layout:{hLineWidth:()=>0,vLineWidth:()=>0,paddingLeft:()=>1,paddingRight:()=>1,paddingTop:()=>1,paddingBottom:()=>1}},
+      {table:{widths:['*','*'],body:[[
+        {text:`Создано\n${reportDateTime(d.created_at)}`,fontSize:5.8,color:'#607086'},
+        {text:`Исправлено\n${d.correction_at?reportDateTime(d.correction_at):'Не устранено'}`,fontSize:5.8,color:'#607086',alignment:'right'}
+      ]]},layout:'noBorders',margin:[0,2,0,0]}
     ]
-  }]
+  };
+}
+function pdfPhotoPages(details,assets){
+  const out=[{text:'Фотоотчёт',style:'title',pageBreak:'before',margin:[0,0,0,7]}];
+  for(let pageStart=0;pageStart<details.length;pageStart+=6){
+    const batch=details.slice(pageStart,pageStart+6),rows=[];
+    for(let r=0;r<3;r++){
+      const left=batch[r*2],right=batch[r*2+1];
+      rows.push([
+        left?{stack:[pdfPhotoCard(left,assets)],margin:[0,0,3,4]}:{text:''},
+        right?{stack:[pdfPhotoCard(right,assets)],margin:[3,0,0,4]}:{text:''}
+      ]);
+    }
+    out.push({
+      table:{widths:['*','*'],body:rows,dontBreakRows:true},
+      layout:{
+        hLineColor:()=> '#d9e2ec',vLineColor:()=> '#d9e2ec',
+        hLineWidth:()=>0.6,vLineWidth:()=>0.6,
+        paddingLeft:()=>3,paddingRight:()=>3,paddingTop:()=>3,paddingBottom:()=>3
+      },
+      ...(pageStart+6<details.length?{pageBreak:'after'}:{})
+    });
+  }
+  return out;
 }
 async function exportReportPdf(){
   if(!analyticsData){alert('Сначала сформируйте отчет кнопкой «Показать».');return}
@@ -742,8 +769,8 @@ async function exportReportPdf(){
       ...pdfTable('Ответственные',['Ответственный','Всего','Откр.','Закр.','Проср.','Ср. принятие'],(a.by_manager||[]).map(x=>[x.responsible_name||'Не назначен',x.total,x.open,x.closed,x.overdue,reportMinutes(x.avg_accept_minutes)]),['*',32,32,32,38,55]),
       ...pdfTable('Категории',['Категория','Всего','Открыто','Просрочено'],(a.by_category||[]).map(x=>[x.category||'Без категории',x.total,x.open,x.overdue]),['*',42,42,50])
     ];
-    if(details.length){content.push({text:'Фотоотчёт',style:'title',pageBreak:'before',margin:[0,0,0,10]});details.forEach(d=>content.push(...pdfPhotoBlock(d,assets)))}
-    const doc={pageSize:'A4',pageOrientation:'portrait',pageMargins:[22,22,22,28],content,defaultStyle:{font:'Roboto',fontSize:8,color:'#25374d'},styles:{company:{fontSize:9,bold:true,color:'#1a7f6b'},title:{fontSize:15,bold:true,color:'#17365f',margin:[0,2,0,6]},meta:{fontSize:8,color:'#607086',margin:[0,0,0,2]},sectionTitle:{fontSize:9.5,bold:true,color:'#17365f'},tableHeader:{bold:true,fillColor:'#eef4f8',color:'#17365f',fontSize:7},kpi:{alignment:'center',bold:true,fontSize:8.5,margin:[2,4,2,4]},timeBox:{alignment:'center',fillColor:'#f5f8fb',margin:[3,5,3,5],fontSize:8}},footer:(current,count)=>({text:`Страница ${current} из ${count}`,alignment:'center',fontSize:7,color:'#8793a3',margin:[0,6,0,0]})};
+    if(details.length)content.push(...pdfPhotoPages(details,assets))
+    const doc={pageSize:'A4',pageOrientation:'portrait',pageMargins:[16,18,16,24],content,defaultStyle:{font:'Roboto',fontSize:8,color:'#25374d'},styles:{company:{fontSize:9,bold:true,color:'#1a7f6b'},title:{fontSize:15,bold:true,color:'#17365f',margin:[0,2,0,6]},meta:{fontSize:8,color:'#607086',margin:[0,0,0,2]},sectionTitle:{fontSize:9.5,bold:true,color:'#17365f'},tableHeader:{bold:true,fillColor:'#eef4f8',color:'#17365f',fontSize:7},kpi:{alignment:'center',bold:true,fontSize:8.5,margin:[2,4,2,4]},timeBox:{alignment:'center',fillColor:'#f5f8fb',margin:[3,5,3,5],fontSize:8}},footer:(current,count)=>({text:`Страница ${current} из ${count}`,alignment:'center',fontSize:7,color:'#8793a3',margin:[0,6,0,0]})};
     btn.textContent='Сохраняем…';const blob=await new Promise((resolve,reject)=>{try{pdfMake.createPdf(doc).getBlob(resolve)}catch(e){reject(e)}});saveBlob(blob,reportFileName('pdf'));
   }catch(e){alert('Не удалось выгрузить PDF: '+errText(e)+'\nПроверьте подключение к интернету и попробуйте снова.')}finally{btn.disabled=false;btn.textContent=old}
 }
